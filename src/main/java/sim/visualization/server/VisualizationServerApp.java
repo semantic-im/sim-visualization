@@ -89,7 +89,9 @@ public class VisualizationServerApp extends Application {
 		};  
 		
 		router.attach("/test", test);
-		router.attach("/sparql", SparqlResource.class);
+		router.attach("/ontology/name", OntologyNameResource.class);
+		router.attach("/ontology/browse", OntologyBrowseResource.class);
+		router.attach("/metric", MetricResource.class);
 		
 		return router;
 	}

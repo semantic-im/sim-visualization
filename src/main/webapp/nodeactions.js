@@ -1,6 +1,6 @@
 var timeoutTable = new Hashtable();
 var displayTable = new HashSet();
-var ACTIONS_DELAY = 800;
+var ACTIONS_DELAY = 1000;
 var ACTIONS_HIDE_DELAY = 3000;
 
 function actionsDisplay(node) {
@@ -65,7 +65,7 @@ function display(node) {
 		.attr("d", d)
 		.on("mouseover", function(d) {this.style.fill = '#d62728';})
 		.on("mouseout", function(d) {this.style.fill = '#ff9896';})
-		.on("click", function(d) {return false;});
+		.on("click", function() {addNodeToChart(node);});
 	setTimeout(function() {actionsCancelDisplay(node);}, ACTIONS_HIDE_DELAY);
 }
 

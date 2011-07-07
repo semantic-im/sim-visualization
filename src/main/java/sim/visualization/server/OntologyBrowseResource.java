@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -35,12 +36,13 @@ import org.restlet.resource.ServerResource;
  * @author valer
  *
  */
-public class SparqlResource extends ServerResource {
+public class OntologyBrowseResource extends ServerResource {
 
-	public static final Logger logger = Logger.getLogger(SparqlResource.class);
+	public static final Logger logger = Logger.getLogger(OntologyBrowseResource.class);
 	
 	private static final int CLUSTER_SIZE = 8;
-	private static final String ONTOLOGY_URI = "http://www.larkc.eu/ontologies/IMOntology.rdf#";
+	//private static final String ONTOLOGY_URI = "http://www.larkc.eu/ontologies/IMOntology.rdf#";
+	private Map<String, String> namespaces;
 	
 	private int getClusterDepth(int count) {
 		int aCount = count, depth = 0;
@@ -51,10 +53,11 @@ public class SparqlResource extends ServerResource {
 		return depth;
 	}
 	
-	private JSONObject createClusterNode(String clusterEntity, String nodeName, String linkName, int from, int to) throws JSONException {
+	private JSONObject createClusterNode(String clusterEntity, String clusterEntityType, String nodeName, String linkName, int from, int to) throws JSONException {
 		JSONObject cluster = new JSONObject();
 		cluster.put("name", nodeName);
 		cluster.put("clusterEntity", clusterEntity == null ? nodeName : clusterEntity);
+		cluster.put("clusterEntityType", clusterEntityType);
 		cluster.put("type", "cluster");
 		cluster.put("label", (from + 1) + ".." + to);
 		cluster.put("from", from);
@@ -75,10 +78,14 @@ public class SparqlResource extends ServerResource {
 	
 	@Post("json")
 	public Representation post(Representation entity) throws ResourceException {
+		Model model = ModelUtil.openModel();
+		namespaces = model.getNamespaces();
+		model.close();
 	        try {
 	                String nodeName = null;
 	                String nodeType = null;
 	                String clusterEntity = null;
+	                String clusterEntityType = null;
 	                int clusterFrom = 0;
 	                int clusterTo = 0;
 	                if (entity != null) {
@@ -89,6 +96,7 @@ public class SparqlResource extends ServerResource {
 		                nodeType = jsonObject.getString("type");
 		                if (nodeType.equals("cluster")) {
 	                		clusterEntity = jsonObject.getString("clusterEntity");
+	                		clusterEntityType = jsonObject.getString("clusterEntityType");
 		                	clusterFrom = jsonObject.getInt("from");
 		                	clusterTo = jsonObject.getInt("to");
 		                }
@@ -102,7 +110,7 @@ public class SparqlResource extends ServerResource {
 
 	                getResponse().setStatus(Status.SUCCESS_ACCEPTED);
 	                
-	                JSONObject data = nodes(nodeName, clusterEntity, clusterFrom, clusterTo - clusterFrom);
+	                JSONObject data = nodes(nodeName, nodeType, clusterEntity, clusterEntityType, clusterFrom, clusterTo - clusterFrom);
 	                
 	                Representation rep = new JsonRepresentation(data);
 	                
@@ -128,35 +136,13 @@ limit 10
 
 	private static final String ROOT_QUERY_ID = "root";
 	private static final String NODE_QUERY_ID = "node";
-	
-	private String readFile(URL url) {
-		StringBuilder content = new StringBuilder();
-		BufferedReader br;
-		try {
-			br = new BufferedReader(new FileReader(new File(url.toURI())));
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-			throw new RuntimeException(e.getMessage(), e);
-		}
-		String line = null;
-		try {
-			while((line = br.readLine()) != null) {
-				content.append(line + "\n");
-			}
-			br.close();
-		} catch (IOException e) {
-			logger.error(e.getMessage(), e);
-			throw new RuntimeException(e.getMessage(), e);
-		}
-		return content.toString();
-	}
-	
+		
 	private String getQuery(String queryId, String parentNode, int offset, int limit) {
 		StringBuilder query = new StringBuilder();
-		query.append(readFile(this.getClass().getResource("/prefixes.sparql")));
-		query.append(readFile(this.getClass().getResource("/" + queryId + ".sparql")));
+		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/prefixes.sparql")));
+		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/" + queryId + ".sparql")));
 		
-		replaceParameters(query, "$parentNode$", parentNode);
+		ModelUtil.replaceParameters(query, "$parentNode$", parentNode);
 		if (offset > -1) {
 			query.append("offset " + String.valueOf(offset) + "\n");
 			query.append("limit " + String.valueOf(limit) + "\n");
@@ -164,19 +150,7 @@ limit 10
 		
 		return query.toString();
 	}
-	
-	private void replaceParameters(StringBuilder query, String parameterName, String value) {
-		int start = -1;
-		while (true) {
-			start = query.indexOf(parameterName, start);
-			if (start == -1) {
-				break;
-			}
-			int end = start + parameterName.length();
-			query.replace(query.indexOf("$parentNode$"), end, "<" + value + ">");
-		}
-	}
-	
+		
 	public int countQueryRows(ClosableIterator<QueryRow> queryRows) {
 		int count = 0;
 		Set<String> subjects = new HashSet<String>();
@@ -191,9 +165,9 @@ limit 10
 		return count;
 	}
 	
-	private QueryResultTable getQueryResultTable(Model model, String parentNode, int offset, int limit) {
+	private QueryResultTable getQueryResultTable(Model model, String parentNode, String parentNodeType, int offset, int limit) {
 		String queryId = null;
-		if (parentNode.equals("ROOT_NODE_ID")) {
+		if (parentNodeType.equals("ontology")) {
 			queryId = ROOT_QUERY_ID;
 		} else {
 			queryId = NODE_QUERY_ID;
@@ -203,10 +177,10 @@ limit 10
 		return qrt;
 	}
 	
-	public int nodesCount(String parentNode) {
-		Model model = openModel();
+	public int nodesCount(String parentNode, String parentNodeType) {
+		Model model = ModelUtil.openModel();
 		
-		ClosableIterator<QueryRow> queryRows = getQueryResultTable(model, parentNode, -1, -1).iterator();
+		ClosableIterator<QueryRow> queryRows = getQueryResultTable(model, parentNode, parentNodeType, -1, -1).iterator();
 		int count = countQueryRows(queryRows);
 		
 		model.close();
@@ -214,18 +188,19 @@ limit 10
 		return count;
 	}
 
-	public JSONObject nodes(String parentNode, String clusterEntity, int offset, int count) {
-		Model model = openModel();
+	public JSONObject nodes(String parentNode, String parentNodeType, String clusterEntity, String clusterEntityType, int offset, int count) {
+		Model model = ModelUtil.openModel();
 		
 		if (clusterEntity == null) {
-			count = nodesCount(parentNode);
+			count = nodesCount(parentNode, parentNodeType);
 		}
 		
 		if (count <= CLUSTER_SIZE) {
 			JSONObject childs;
 			try {
 				String node = clusterEntity != null ? clusterEntity : parentNode;
-				childs = getChildsJSON(getQueryResultTable(model, node, offset, count), parentNode);
+				String type = clusterEntityType != null ? clusterEntityType : parentNodeType;
+				childs = getChildsJSON(getQueryResultTable(model, node, type, offset, count), parentNode);
 			} catch (JSONException e) {
 				logger.error(e.getMessage(), e);
 				throw new RuntimeException(e.getMessage(), e);
@@ -237,6 +212,7 @@ limit 10
 		}
 		
 		clusterEntity = clusterEntity != null ? clusterEntity : parentNode;
+		clusterEntityType = clusterEntityType != null ? clusterEntityType : parentNodeType;
 		int depth = getClusterDepth(count);
 		
 		JSONArray jsonArray = new JSONArray();
@@ -254,7 +230,7 @@ limit 10
 			String clusterName = clusterEntity + "-C_" + from + "_" + to;
 			
 			try {
-				jsonArray.put(createClusterNode(clusterEntity, clusterName, clusterName + "L", from, to));
+				jsonArray.put(createClusterNode(clusterEntity, clusterEntityType, clusterName, clusterName + "L", from, to));
 			} catch (JSONException e) {
 				logger.error(e.getMessage(), e);
 				throw new RuntimeException(e.getMessage(), e);
@@ -274,13 +250,6 @@ limit 10
 		
 	}
 
-	private Model openModel() {
-		Model model = new RepositoryModel(new HTTPRepository("http://127.0.0.1:8080/openrdf-sesame", "sim"));
-		model.open();
-		
-		return model;
-	}
-	
 	private JSONObject getChildsJSON(QueryResultTable queryResultTable, String parentNode) throws JSONException {
 		if (queryResultTable.getVariables().size() != 3) {
 			logger.error("The query must return exactly three variables!");
@@ -320,9 +289,16 @@ limit 10
 
 	private JSONObject createNode(URI subjectURI, URI typeURI, URI predicateURI) throws JSONException {
 		JSONObject node = new JSONObject();
-		node.put("name", subjectURI.toString());
+		String name = subjectURI.toString();
+		node.put("name", name);
 		node.put("type", typeURI.equals(OWL.Class) ? "class" : typeURI.equals(OWL.ObjectProperty) ? "objectProperty" : typeURI.equals(OWL.DatatypeProperty) ? "datatypeProperty" : "entity");
-		node.put("label", subjectURI.toString().replace(ONTOLOGY_URI, ""));
+		for (String namespacePrefix : namespaces.keySet()) {
+			String namespace = namespaces.get(namespacePrefix);
+			if (name.contains(namespace)) {
+				node.put("label", subjectURI.toString().replace(namespace, namespacePrefix + ":"));
+				break;
+			}
+		}
 		
 		JSONObject obj = new JSONObject();
 		obj.put("node", node);

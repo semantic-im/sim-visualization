@@ -1,8 +1,17 @@
 var INITIAL_VISIBLE_DEPTH = 1;
 
-var w = 1024,
-	h = 768;
+var w = window.innerWidth - ((window.innerWidth*5)/100),//document.all.ontoview.clientWidth,
+	h = window.innerHeight - ((window.innerHeight*5)/100);//document.all.ontoview.clientHeight;
 	//fill = d3.scale.category10();
+
+if (w < 800) {
+	w = 800;
+}
+if (h < 600) {
+	h = 600;
+}
+//console.debug(w);
+//console.debug(h);
 
 var nodes, links;
 var nodesHash = new Hashtable(), force;
@@ -27,6 +36,7 @@ function Node(jsonNode) {
 	this.label = jsonNode.label;
 	if (this.type == "cluster") {
 		this.clusterEntity = jsonNode.clusterEntity;
+		this.clusterEntityType = jsonNode.clusterEntityType;
 		this.from = jsonNode.from;
 		this.to = jsonNode.to;
 	}
@@ -273,7 +283,7 @@ function positionArrow(d) {
 }
 
 function getFill(node) {
-	if (node.type == "internal") {
+	if (node.type == "ontology") {
 		return "#9467bd";
 	} else if (node.type == "class") {
 		return "#ff7f0e";
@@ -298,11 +308,12 @@ function getLinkColor(link) {
 	}
 }
 
-function createServerJsonParameter(node) {
+function createGetChildsJsonParameter(node) {
 	var result = "{" + "name:'" + node.name + "'";
 	result = result + ",type:" + node.type;
 	if (node.type == "cluster") {
 		result = result + ",clusterEntity:'" + node.clusterEntity + "'";
+		result = result + ",clusterEntityType:'" + node.clusterEntityType + "'";
 		result = result + ",from:" + node.from;
 		result = result + ",to:" + node.to;
 	}
@@ -315,7 +326,7 @@ function cacheNodesChilds(nodes_) {
 		if (childLinksHash.containsKey(node.name)) {
 			continue;
 		}
-		var jsonNode = createServerJsonParameter(node);
+		var jsonNode = createGetChildsJsonParameter(node);
 		getChilds(jsonNode, function(childs_) {
 			cacheNodeChilds(childs_.node, childs_.childs);
 		});
@@ -353,7 +364,7 @@ function cacheNodeChilds(parentNodeName, childs_) {
 function recursive(node, depth) {
 	var jsonNode = null;
 	if (node) {
-		jsonNode = createServerJsonParameter(node);
+		jsonNode = createGetChildsJsonParameter(node);
 	}
 	getChilds(jsonNode, 
 		function (childs_) {
@@ -379,9 +390,10 @@ function recursive(node, depth) {
 	}
 }
 var jsonNode = new Object();
-jsonNode.name = "ROOT_NODE_ID";
-jsonNode.type = "internal";
-jsonNode.label = "Root";
+var ontologyName = getOntology();
+jsonNode.name = ontologyName; //"ROOT_NODE_ID";
+jsonNode.type = "ontology";
+jsonNode.label = ontologyName; //"Root";
 var rootNode = new Node(jsonNode);
 nodesHash.put(rootNode.name, rootNode);
 recursive(rootNode, 1);

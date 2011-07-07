@@ -1,0 +1,4 @@
+select ?subject
+	where {
+		?subject rdf:type owl:Ontology .
+	}

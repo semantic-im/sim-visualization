@@ -15,10 +15,16 @@ function ajaxCall(service, callback, theData, async) {
 	$.ajax(params); 	
 }
 
-function executeSparql(callback, data, async) {
-	ajaxCall("sparql", callback, data, async);
+function getOntology() {
+	var theResult = null;
+	ajaxCall("ontology/name", function(result) {theResult = result.ontology;}, null, false);
+	return theResult;
 }
 
 function getChilds(node, callback, async) {
-	executeSparql(callback, node, async);
+	ajaxCall("ontology/browse", callback, node, async);
+}
+
+function getMetricData(node) {
+	ajaxCall("metric", callback, node, async);
 }
