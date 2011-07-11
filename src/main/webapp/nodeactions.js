@@ -3,8 +3,21 @@ var displayTable = new HashSet();
 var ACTIONS_DELAY = 1000;
 var ACTIONS_HIDE_DELAY = 3000;
 
+var actionsNodeNames = ["http://www.larkc.eu/ontologies/IMOntology.rdf#IORead"];
+
+function actionsExistsForNode(node) {
+	var founded = false;
+	for(var i = 0; i <actionsNodeNames.length; i++) {
+		if (node.name == actionsNodeNames[i]) {
+			founded = true;
+			break;
+		}
+	}
+	return founded;
+}
+
 function actionsDisplay(node) {
-	if (node.type == 'cluster') {
+	if ((node.type == 'cluster') || !actionsExistsForNode(node)) {
 		return;
 	}
 	if (displayTable.contains(node.name)) {

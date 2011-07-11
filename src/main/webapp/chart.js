@@ -1,4 +1,4 @@
-var nodes = new HashSet();
+var chartNodes = new HashSet();
 
 function createMetricJsonParameter(node) {
 	var result = "{" + "name:'" + node.name + "'";
@@ -7,8 +7,8 @@ function createMetricJsonParameter(node) {
 }
 
 function addNodeToChart(node) {
-	if (!nodes.contains(node)) {
-		nodes.add(node);
+	if (!chartNodes.contains(node)) {
+		chartNodes.add(node);
 	}
 	redrawChart();
 }
