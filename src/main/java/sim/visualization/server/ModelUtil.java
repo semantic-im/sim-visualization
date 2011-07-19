@@ -23,8 +23,7 @@ public class ModelUtil {
 	public static final Logger logger = Logger.getLogger(ModelUtil.class);
 	
 	public static Model openModel() {
-		//Model model = new RepositoryModel(new HTTPRepository("http://127.0.0.1:8080/openrdf-sesame", "sim1"));
-		Model model = new RepositoryModel(new HTTPRepository("http://demo.softgress.com:18080/openrdf-sesame", "sim"));
+		Model model = new RepositoryModel(new HTTPRepository("http://127.0.0.1:8080/openrdf-sesame", "sim"));
 		
 		model.open();
 		
