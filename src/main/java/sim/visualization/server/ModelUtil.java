@@ -13,6 +13,8 @@ import org.apache.log4j.Logger;
 import org.ontoware.rdf2go.model.Model;
 import org.openrdf.rdf2go.RepositoryModel;
 import org.openrdf.repository.http.HTTPRepository;
+import org.restlet.Context;
+import org.restlet.Response;
 
 /**
  * @author valer
@@ -21,12 +23,13 @@ import org.openrdf.repository.http.HTTPRepository;
 public class ModelUtil {
 
 	public static final Logger logger = Logger.getLogger(ModelUtil.class);
-	
+
 	public static Model openModel() {
-		Model model = new RepositoryModel(new HTTPRepository("http://127.0.0.1:8080/openrdf-sesame", "sim"));
-		
+		String repoAddress = "http://" + Response.getCurrent().getServerInfo().getAddress() + ":"
+				+ Response.getCurrent().getServerInfo().getPort() + "/openrdf-sesame";
+		Context.getCurrentLogger().info("Model.openModel(): " + repoAddress);
+		Model model = new RepositoryModel(new HTTPRepository(repoAddress, "sim"));
 		model.open();
-		
 		return model;
 	}
 
