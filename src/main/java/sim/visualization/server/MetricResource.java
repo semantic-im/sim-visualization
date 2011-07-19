@@ -89,7 +89,7 @@ public class MetricResource extends ServerResource {
 
 	                getResponse().setStatus(Status.SUCCESS_ACCEPTED);
 	                
-	                JSONObject data = metricData(nodeName, nodeType);
+	                JSONArray data = metricData(nodeName, nodeType);
 	                
 	                Representation rep = new JsonRepresentation(data);
 	                
@@ -103,16 +103,12 @@ public class MetricResource extends ServerResource {
 	        return null;
 	}
 
-	private String getQuery(String queryId, String parentNode, int offset, int limit) {
+	private String getQuery(String metric) {
 		StringBuilder query = new StringBuilder();
 		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/prefixes.sparql")));
-		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/" + queryId + ".sparql")));
+		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/metric.sparql")));
 		
-		ModelUtil.replaceParameters(query, "$parentNode$", parentNode);
-		if (offset > -1) {
-			query.append("offset " + String.valueOf(offset) + "\n");
-			query.append("limit " + String.valueOf(limit) + "\n");
-		}
+		ModelUtil.replaceParameters(query, "$metric$", metric);
 		
 		return query.toString();
 	}
@@ -127,11 +123,27 @@ order by desc (?date)
 limit 10
 */
 
-	public JSONObject metricData(String nodeName, String nodeType) {
+	public JSONArray metricData(String nodeName, String nodeType) throws JSONException {
 		Model model = ModelUtil.openModel();
 		
-		//JSONArray jsonArray = new JSONArray();
-		JSONObject jsonArray = new JSONObject();
+		JSONArray jsonArray = new JSONArray();
+		
+		QueryResultTable qrt = model.sparqlSelect(getQuery(nodeName));
+		ClosableIterator<QueryRow> it = qrt.iterator();
+		while (it.hasNext()) {
+			QueryRow qr = it.next();
+			String metricId = qr.getValue("metricid").toString();
+			String timestamp = qr.getValue("timestamp").toString();
+			String value = qr.getValue("value").toString();
+			
+			JSONObject obj = new JSONObject();
+			obj.put("id", metricId);
+			obj.put("timestamp", timestamp.substring(0, timestamp.indexOf("^^")));
+			obj.put("value", value.substring(0, value.indexOf("^^")));
+			
+			jsonArray.put(obj);
+		}
+		
 		
 		return jsonArray;		
 		

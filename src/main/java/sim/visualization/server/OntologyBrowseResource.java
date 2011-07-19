@@ -3,11 +3,6 @@
  */
 package sim.visualization.server;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.URL;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -21,10 +16,9 @@ import org.ontoware.rdf2go.model.Model;
 import org.ontoware.rdf2go.model.QueryResultTable;
 import org.ontoware.rdf2go.model.QueryRow;
 import org.ontoware.rdf2go.model.node.Node;
+import org.ontoware.rdf2go.model.node.Resource;
 import org.ontoware.rdf2go.model.node.URI;
 import org.ontoware.rdf2go.vocabulary.OWL;
-import org.openrdf.rdf2go.RepositoryModel;
-import org.openrdf.repository.http.HTTPRepository;
 import org.restlet.data.Status;
 import org.restlet.ext.json.JsonRepresentation;
 import org.restlet.representation.Representation;
@@ -118,7 +112,7 @@ public class OntologyBrowseResource extends ServerResource {
 	                
 	                return rep;
 	        } catch (Exception e) {
-	        	
+	        	logger.error("internal server exception", e);
 	            getResponse().setStatus(Status.SERVER_ERROR_INTERNAL);
 	        }
 	        return null;
@@ -189,14 +183,13 @@ limit 10
 	}
 
 	public JSONObject nodes(String parentNode, String parentNodeType, String clusterEntity, String clusterEntityType, int offset, int count) {
-		Model model = ModelUtil.openModel();
-		
 		if (clusterEntity == null) {
 			count = nodesCount(parentNode, parentNodeType);
 		}
 		
 		if (count <= CLUSTER_SIZE) {
 			JSONObject childs;
+			Model model = ModelUtil.openModel();
 			try {
 				String node = clusterEntity != null ? clusterEntity : parentNode;
 				String type = clusterEntityType != null ? clusterEntityType : parentNodeType;
@@ -265,19 +258,19 @@ limit 10
 			Node subject = qr.getValue("subject");
 			Node type = qr.getValue("type");
 			Node predicate = qr.getValue("predicate");
-			if (!(subject instanceof URI)) {
-				logger.error("the return types must pe URI!");
-				throw new RuntimeException("the return types must pe URI!");
+			if (!(subject instanceof Resource)) {
+				logger.error("the return types must be Resource!");
+				throw new RuntimeException("the return types must be Resource!");
 			}
 			if (subjects.contains(subject.toString())) {
 				continue; //the predicate must be different, save it on the links name
 			}
 			subjects.add(subject.toString());
 
-			URI valueURI = subject.asURI();
+			Resource valueResource = subject.asResource();
 			URI typeURI = type.asURI();
 			URI predicateURI = predicate.asURI();
-			jsonArray.put(createNode(valueURI, typeURI, predicateURI));
+			jsonArray.put(createNode(valueResource, typeURI, predicateURI));
 		}
 		
 		JSONObject jsonObject = new JSONObject();
@@ -287,18 +280,20 @@ limit 10
 		return jsonObject;
 	}
 
-	private JSONObject createNode(URI subjectURI, URI typeURI, URI predicateURI) throws JSONException {
+	private JSONObject createNode(Resource subjectResource, URI typeURI, URI predicateURI) throws JSONException {
 		JSONObject node = new JSONObject();
-		String name = subjectURI.toString();
+		String name = subjectResource.toString();
 		node.put("name", name);
 		node.put("type", typeURI.equals(OWL.Class) ? "class" : typeURI.equals(OWL.ObjectProperty) ? "objectProperty" : typeURI.equals(OWL.DatatypeProperty) ? "datatypeProperty" : "entity");
+		String label = subjectResource.toString();
 		for (String namespacePrefix : namespaces.keySet()) {
 			String namespace = namespaces.get(namespacePrefix);
 			if (name.contains(namespace)) {
-				node.put("label", subjectURI.toString().replace(namespace, namespacePrefix + ":"));
+				label = label.replace(namespace, namespacePrefix + ":");
 				break;
 			}
 		}
+		node.put("label", label);
 		
 		JSONObject obj = new JSONObject();
 		obj.put("node", node);

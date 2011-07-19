@@ -2,23 +2,31 @@
 <html>
   <head>
     <title>Force-Directed Layout</title>
-    <script type="text/javascript" src="./jquery-1.6.1.js"></script>
+    <script type="text/javascript" src="./jquery.ui/jquery-1.5.1.js"></script>
     <script type="text/javascript" src="./jshashtable-2.1.js"></script>
     <script type="text/javascript" src="./jshashset.js"></script>
     <script type="text/javascript" src="./d3/d3.js"></script>
     <script type="text/javascript" src="./d3/d3.geom.js"></script>
     <script type="text/javascript" src="./d3/d3.layout.js"></script>
     <script type="text/javascript" src="./d3/d3.behavior.js"></script>
+    <script type="text/javascript" src="./d3/d3.time.js"></script>
     <script type="text/javascript" src="services.js"></script>
     <script type="text/javascript" src="arrowhead.js"></script>
-    <script type="text/javascript" src="nodeactions.js"></script>
-    <script type="text/javascript" src="chart.js"></script>
     <link type="text/css" rel="stylesheet" href="visualization.css"/>
   </head>
   <body>
-    <div id="ontoview" style="text-align: center;">
+   	<script type="text/javascript" src="main.js"></script>
+   	<script type="text/javascript" src="nodeactions.js"></script>
+    <div id="ontoview" style="position: absolute;">
     	<!-- button class="first last" onclick="transition()">Update</button -->
     </div>
-    <script type="text/javascript" src="visualization.js"></script>
+    <div id="chart-container" style="position: absolute; display: none;">
+    	<div id="chart-metrics" style="position: absolute;"">
+    	</div>
+	   	<div id="chart" style="position: absolute;"">
+	   	</div>
+	</div>
+	<script type="text/javascript" src="chart-old.js"></script>
+	<script type="text/javascript" src="visualization.js"></script>
   </body>
 </html>

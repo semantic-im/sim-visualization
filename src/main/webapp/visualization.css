@@ -1,3 +1,6 @@
+#resizable { width: 150px; height: 150px; padding: 0.5em; }
+#resizable h3 { text-align: center; margin: 0; }
+
 circle.node {
   stroke: #fff;
   stroke-width: 1px;
@@ -28,4 +31,17 @@ path.nodeActions {
 	stroke-opacity: .5;
 	stroke: #d62728;
 	stroke-width: 0px;
+}
+
+
+
+
+path.chart {
+	fill-opacity: .6;
+	fill: steelblue;
+}
+
+line.chart {
+  stroke: #000;
+  shape-rendering: crispEdges;
 }

@@ -1,0 +1,27 @@
+.metric-container {
+	display: inline;
+	padding: 5px;
+}
+
+.metric-icon {
+	width: 16px;
+	height: 16px;
+	vertical-align: middle
+}
+
+.metric-label {
+	white-space: nowrap;
+	text-color: #CCCCCC; 
+	font-size: 12px; 
+	font-family: Verdana; 
+	vertical-align: middle;
+}
+
+path.chart {
+	fill-opacity: .6;
+}
+
+line.chart {
+  stroke: #000;
+  shape-rendering: crispEdges;
+}

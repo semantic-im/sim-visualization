@@ -1,31 +1,11 @@
-select distinct ?subject ?type ?predicate
+PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>
+
+select ?metricid ?timestamp ?value
 	where {
 		{
-			?subject rdf:type owl:Class .
-			?subject rdfs:subClassOf $parentNode$ .
-			?subject rdf:type ?type .
-			?subject ?predicate $parentNode$ .
-		}
-		UNION
-		{
-			?subject rdf:type owl:ObjectProperty .
-			?subject rdfs:range $parentNode$ .
-			?subject rdf:type ?type .
-			?subject ?predicate $parentNode$ .
-		}
-		UNION
-		{
-			?subject rdf:type owl:ObjectProperty .
-			?subject rdfs:domain $parentNode$ .
-			?subject rdf:type ?type .
-			?subject ?predicate $parentNode$ .
-		}
-		UNION
-		{
-			?subject rdf:type owl:DatatypeProperty .
-			?subject rdfs:domain $parentNode$ .
-			?subject rdf:type ?type .
-			?subject ?predicate $parentNode$ .
+			?metricid rdf:type $metric$ .
+			?metricid :hasTimeStamp ?timestamp .
+			?metricid :hasDataValue ?value .
 		}
 	}
-order by ?subject
+order by ?timestamp

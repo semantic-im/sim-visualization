@@ -25,6 +25,6 @@ function getChilds(node, callback, async) {
 	ajaxCall("ontology/browse", callback, node, async);
 }
 
-function getMetricData(node) {
-	ajaxCall("metric", callback, node, async);
+function getMetricData(node, callback) {
+	ajaxCall("metric", callback, node, false);
 }

@@ -1,26 +1,17 @@
 var INITIAL_VISIBLE_DEPTH = 1;
 
-var w = window.innerWidth - ((window.innerWidth*5)/100),//document.all.ontoview.clientWidth,
-	h = window.innerHeight - ((window.innerHeight*5)/100);//document.all.ontoview.clientHeight;
-	//fill = d3.scale.category10();
-
-if (w < 800) {
-	w = 800;
-}
-if (h < 600) {
-	h = 600;
-}
-//console.debug(w);
-//console.debug(h);
-
 var nodes, links;
 var nodesHash = new Hashtable(), force;
 var childLinksHash = new Hashtable();
 
-var vis = d3.select("#ontoview")
+var ontoview = d3.select("#ontoview")
+	.style("top", clientTop)
+	.style("left", clientLeft);
+
+var vis = ontoview
 	.append("svg:svg")
-	.attr("width", w + "px")
-	.attr("height", h + "px")
+	.attr("width", clientWidth + "px")
+	.attr("height", clientHeight + "px")
 	.style("border", "1px solid black")
 	.attr("pointer-events", "all")
 	.call(d3.behavior.zoom().on("zoom", redraw))
@@ -85,7 +76,7 @@ function draw() {
 		.distance(80)
 		.nodes(nodes)
 		.links(links)
-		.size([w, h])
+		.size([clientWidth, clientHeight])
 		.start();
 
 	var link = vis.selectAll("line.link").data(links, linkid);
@@ -189,9 +180,6 @@ function displayExpandSigns(nodeData) {
 		.attr("stroke", "#fff");
 }
 
-function validID(id) {
-	return id.replace("#", "_").replace(new RegExp("\\.", "g"), "").replace(new RegExp("/", "g"), "").replace(new RegExp(":", "g"), "");
-}
 
 function displayExpandSign(id) {
 	var selection = vis.select("#" + validID(id));
