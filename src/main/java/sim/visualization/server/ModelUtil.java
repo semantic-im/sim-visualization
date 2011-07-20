@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Properties;
 
 import org.apache.log4j.Logger;
 import org.ontoware.rdf2go.model.Model;
@@ -25,10 +26,10 @@ public class ModelUtil {
 	public static final Logger logger = Logger.getLogger(ModelUtil.class);
 
 	public static Model openModel() {
-		String repoAddress = "http://" + Response.getCurrent().getServerInfo().getAddress() + ":"
-				+ Response.getCurrent().getServerInfo().getPort() + "/openrdf-sesame";
+		String repoAddress = "http://" + Settings.getRdfServerAddress() + ":"
+				+ Settings.getRdfServerPort() + "/openrdf-sesame";
 		Context.getCurrentLogger().info("Model.openModel(): " + repoAddress);
-		Model model = new RepositoryModel(new HTTPRepository(repoAddress, "sim"));
+		Model model = new RepositoryModel(new HTTPRepository(repoAddress, Settings.getRdfRepositoryId()));
 		model.open();
 		return model;
 	}
