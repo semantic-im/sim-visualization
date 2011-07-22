@@ -18,6 +18,19 @@ var IO_READ = 'http://www.larkc.eu/ontologies/IMOntology.rdf#IORead',
 	WAIT_CPU_LOAD = 'http://www.larkc.eu/ontologies/IMOntology.rdf#WaitCPULoad',
 	WAIT_CPU_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#WaitCPUTime';
 
+var PROCESS_TOTAL_CPU_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ProcessTotalCPUTime',
+	THREAD_BLOCK_COUNT = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadBlockCount',
+	THREAD_BLOCK_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadBlockTime',
+	THREAD_COUNT = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadCount',
+	THREAD_GCC_COUNT = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadGccCount',
+	THREAD_GCC_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadGccTime',
+	THREAD_SYSTEM_CPU_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadSystemCPUTime',
+	THREAD_TOTAL_CPU_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadTotalCPUTime',
+	THREAD_USER_CPU_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadUserCPUTime',
+	THREAD_WAIT_COUNT = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadWaitCount',
+	THREAD_WAIT_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#ThreadWaitTime',
+	WALL_CLOCK_TIME = 'http://www.larkc.eu/ontologies/IMOntology.rdf#WallClockTime';
+
 var systemMetrics = [IO_READ, 
                      IO_WRITE,
                      IDLE_CPU_LOAD,
@@ -39,6 +52,19 @@ var systemMetrics = [IO_READ,
                      WAIT_CPU_TIME
                     ];
 
+var methodMetrics = [ PROCESS_TOTAL_CPU_TIME,
+                  	THREAD_BLOCK_COUNT,
+                	THREAD_BLOCK_TIME,
+                	THREAD_COUNT,
+                	THREAD_GCC_COUNT,
+                	THREAD_GCC_TIME,
+                	THREAD_SYSTEM_CPU_TIME,
+                	THREAD_TOTAL_CPU_TIME,
+                	THREAD_USER_CPU_TIME,
+                	THREAD_WAIT_COUNT,
+                	THREAD_WAIT_TIME,
+                	WALL_CLOCK_TIME];
+
 var clientWidth = window.innerWidth - 20,//document.all.ontoview.clientWidth,
 	clientHeight = window.innerHeight - 20,//document.all.ontoview.clientHeight;
 	clientTop = 10,
@@ -55,5 +81,5 @@ if (clientHeight < 600) {
 //console.debug(h);
 
 function validID(id) {
-	return id.replace("#", "_").replace(new RegExp("\\.", "g"), "").replace(new RegExp("/", "g"), "").replace(new RegExp(":", "g"), "");
+	return id.replace("#", "_").replace(new RegExp("\\.", "g"), "").replace(new RegExp("/", "g"), "").replace(new RegExp(":", "g"), "").replace(new RegExp("\\$", "g"), "_");
 }

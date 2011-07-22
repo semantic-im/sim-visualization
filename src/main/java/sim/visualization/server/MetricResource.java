@@ -11,6 +11,7 @@ import org.ontoware.aifbcommons.collection.ClosableIterator;
 import org.ontoware.rdf2go.model.Model;
 import org.ontoware.rdf2go.model.QueryResultTable;
 import org.ontoware.rdf2go.model.QueryRow;
+import org.restlet.Context;
 import org.restlet.data.Status;
 import org.restlet.ext.json.JsonRepresentation;
 import org.restlet.representation.Representation;
@@ -64,20 +65,22 @@ public class MetricResource extends ServerResource {
 	@Post("json")
 	public Representation post(Representation entity) throws ResourceException {
 		try {
-			String nodeName = null;
-			String nodeType = null;
+			String nodeMetric = null;
+			String nodeMethod = null;
 			if (entity != null) {
 				String text = entity.getText();
 				JsonRepresentation represent = new JsonRepresentation(text);
 				JSONObject jsonObject = represent.getJsonObject();
-				nodeName = jsonObject.getString("name");
-				nodeType = jsonObject.getString("type");
-				System.out.println(nodeName);
+				nodeMetric = jsonObject.getString("metric");
+				if (jsonObject.has("method")) {
+					nodeMethod = jsonObject.getString("method");
+				}
+				System.out.println(nodeMetric);
 			}
 
 			getResponse().setStatus(Status.SUCCESS_ACCEPTED);
 
-			JSONArray data = metricData(nodeName, nodeType);
+			JSONArray data = metricData(nodeMetric, nodeMethod);
 
 			Representation rep = new JsonRepresentation(data);
 
@@ -85,19 +88,25 @@ public class MetricResource extends ServerResource {
 
 			return rep;
 		} catch (Exception e) {
-
 			getResponse().setStatus(Status.SERVER_ERROR_INTERNAL);
 		}
 		return null;
 	}
 
-	private String getQuery(String metric) {
+	private String getQuery(String metric, String method) {
 		StringBuilder query = new StringBuilder();
 		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/prefixes.sparql")));
-		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/metric.sparql")));
+		if (method == null) {
+			query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/system-metric.sparql")));
+		} else {
+			query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/method-metric.sparql")));
+		}
 
 		ModelUtil.replaceParameters(query, "$metric$", metric);
-
+		if (method != null) {
+			ModelUtil.replaceParameters(query, "$method$", method);
+		}
+		
 		return query.toString();
 	}
 
@@ -111,12 +120,12 @@ order by desc (?date)
 limit 10
 	 */
 
-	public JSONArray metricData(String nodeName, String nodeType) throws JSONException {
+	public JSONArray metricData(String nodeMetric, String nodeMethod) throws JSONException {
 		Model model = ModelUtil.openModel();
 
 		JSONArray jsonArray = new JSONArray();
 
-		QueryResultTable qrt = model.sparqlSelect(getQuery(nodeName));
+		QueryResultTable qrt = model.sparqlSelect(getQuery(nodeMetric, nodeMethod));
 		ClosableIterator<QueryRow> it = qrt.iterator();
 		while (it.hasNext()) {
 			QueryRow qr = it.next();

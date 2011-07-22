@@ -2,11 +2,20 @@ var p = 20,
 	time = d3.time.format("%Y-%m-%dT%H:%M:%S"),
 	shortTime = d3.time.format("%d.%m.%y %H:%M:%S");
 
-function Chart() {
-	this.fill = d3.scale.category10();
+function Metric() {
+	this.metric = null;
+	this.method = null;
 	
-	this.allChartWidth = ((clientWidth * 100)/100);
-	this.chartHeight = ((clientHeight * 90) / 100);
+	this.data = new Array();
+}
+function Chart(id, width, height) {
+	this.id = id;
+	
+	this.fill = d3.scale.category20();
+	
+	//this.chartHeight = ((clientHeight * 90) / 100);
+	this.allChartWidth = width;
+	this.chartHeight = height;
 
 	this.yLabelWidth = 40;
 	this.legendWidth = 50;
@@ -15,7 +24,7 @@ function Chart() {
 	this.h1 = ((this.chartHeight * 80) / 100);
 	this.h2 = ((this.chartHeight * 10) / 100);
 	
-	this.chartMetrics = new Hashtable();
+	this.chartMetrics = new Array();
 	
 	this.x = d3.scale.linear().range([0, this.chartWidth]),
 	this.y1 = d3.scale.linear().range([this.h1 - p, 0]),
@@ -41,10 +50,10 @@ function Chart() {
 	this.active;
 }
 
-Chart.prototype.init = function() {
+Chart.prototype.init = function(color) {
 	var chart = this;
 
-	d3.select(window).on("mousemove", function() {
+	d3.select("#" + chart.id).on("mousemove", function() {
 		if (chart.xx != null) {
 
 			// Compute the new (clamped) focus region.
@@ -65,12 +74,12 @@ Chart.prototype.init = function() {
 				//.range([ chart.yLabelWidth, chart.chartWidth + chart.yLabelWidth ]);
 				.range([ 0, chart.chartWidth ]);
 			
-			var metrics = chart.chartMetrics.keys();
+			var metrics = chart.chartMetrics;
 			for (var i = 0; i < metrics.length; i++) {
 				var newData = computeFocusData(chart, metrics[i]);
 				
 				// Recompute the focus path.
-				chart.focusArea.select("#" + validID(metrics[i]))
+				chart.focusArea.select("#" + validID(metrics[i].metric))
 					.data([newData])
 					.attr("d", 
 						d3.svg.area().x(function(d) {
@@ -92,14 +101,32 @@ Chart.prototype.init = function() {
 			chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.x1)));
 		}
 	});
-	d3.select(window).on("mouseup", function() {chart.xx = null;});
+	d3.select("#" + chart.id).on("mouseup", function() {chart.xx = null;});
 
-	this.chartSvgArea = d3.select("#chart1")
+	this.chartSvgArea = d3.select("#" + this.id)
 		.append("svg:svg")
 		.attr("width", this.allChartWidth)
 		.attr("height", this.h1 + this.h2 + p)
 		.style("border", "1px solid black");
 	
+	this.chartSvgArea.append("svg:rect")
+			.attr("pointer-events", "none")
+			.attr("x", 0)
+			.attr("y", 0)
+			.attr("height", this.h1 + this.h2 + p)
+			.attr("width", this.allChartWidth)
+			.attr("fill", color).attr("fill-opacity", .2);
+	this.chartSvgArea.append("svg:text")
+		.attr("font-family", "Verdana")
+		.attr("font-size", "64")
+		.attr("stroke", "0px")
+		.attr("fill", color)
+		.attr("fill-opacity", "0.2")
+		.attr("x", this.allChartWidth / 2)
+		.attr("y", (this.h1 + this.h2 + p) / 2)
+		.attr("text-anchor", "middle")
+		.text("DROP HERE!");
+
 	this.focusArea = this.chartSvgArea.append("svg:g")
 		.attr("transform", "translate(" + this.yLabelWidth + ",0)");
 	
@@ -110,7 +137,7 @@ Chart.prototype.init = function() {
 function computeFocusData(chart, metric) {
 	var newData = new Array();
 	var lastMinXData = null, firstMaxXData = null;
-	var data = chart.chartMetrics.get(metric);
+	var data = metric.data;
 	for (var i = 0; i < data.length; i++) {
 		if (data[i].x <= chart.x0) {
 			lastMinXData = data[i];
@@ -147,24 +174,38 @@ function computeFocusData(chart, metric) {
 }
 
 Chart.prototype.createMetricJsonParameter = function(metric) {
-	var result = "{" + "name:'" + metric + "', type:'type'";
+	var result = "{" + "metric:'" + metric.metric + "'";
+	if (metric.method) {
+		result = result + ", method:'" + metric.method + "'";
+	}
 	return result + "}";
 };
 
-Chart.prototype.addMetricToChart = function(metric) {
-	if (!this.chartMetrics.containsKey(metric)) {
-		this.chartMetrics.put(metric, new Array());
+Chart.prototype.addMetricToChart = function(aMetric, aMethod) {
+	var metric = new Metric();
+	metric.metric = aMetric;
+	metric.method = aMethod;
+	var exists = false;
+	for (var i = 0; i < this.chartMetrics.length; i++) {
+		if (this.chartMetrics[i] == metric) {
+			exists = true;
+			break;
+		}
 	}
+	if (exists) {
+		return;
+	} 
+	this.chartMetrics.push(metric);
 	this.displayChart();
 };
 
 Chart.prototype.displayChart = function() {
-	var metrics = this.chartMetrics.keys();
+	var metrics = this.chartMetrics;
 	for (var i = 0; i < metrics.length; i++) {
-		if (this.chartMetrics.get(metrics[i]).length == 0) {
+		if (metrics[i].data.length == 0) {
 			var metricData = null;
 			getMetricData(this.createMetricJsonParameter(metrics[i]), function(data) {metricData = data;});
-			this.chartMetrics.put(metrics[i], this.processData(metricData));
+			metrics[i].data = this.processData(metricData);
 			this.computeScales();
 		};
 	};
@@ -175,13 +216,46 @@ Chart.prototype.displayChart = function() {
 };
 
 Chart.prototype.getYLabel = function(value) {
-	var metrics = this.chartMetrics.keys();
+	var metrics = this.chartMetrics;
 	for (var i = 0; i < metrics.length; i++) {
-		if ((metrics[i] == IO_READ) ||
-				(metrics[i] == IO_WRITE)) {
+		if ((metrics[i].metric == IO_READ) ||
+				(metrics[i].metric == IO_WRITE) ||
+				(metrics[i].metric == SWAP_IN) ||
+				(metrics[i].metric == SWAP_OUT) ||
+				(metrics[i].metric == TOTAL_SYSTEM_FREE_MEMORY) ||
+				(metrics[i].metric == TOTAL_SYSTEM_USED_MEMORY) ||
+				(metrics[i].metric == TOTAL_SYSTEM_USED_SWAP)) {
 			return Math.round(value / 1024) + "K";
+		} else if ((metrics[i].metric == IDLE_CPU_LOAD) ||
+				(metrics[i].metric == IRQ_CPU_LOAD) ||
+				(metrics[i].metric == SYSTEM_CPU_LOAD) ||
+				(metrics[i].metric == SYSTEM_LOAD_AVERAGE) ||
+				(metrics[i].metric == USER_CPU_LOAD) ||
+				(metrics[i].metric == WAIT_CPU_LOAD)) {
+			return d3.format(".2%")(value);
+		} else if ((metrics[i].metric == IDLE_CPU_TIME) ||
+				(metrics[i].metric == IRQ_CPU_TIME) ||
+				(metrics[i].metric == SYSTEM_CPU_TIME) ||
+				(metrics[i].metric == USER_CPU_TIME) ||
+				(metrics[i].metric == WAIT_CPU_TIME) ||
+				(metrics[i].metric == PROCESS_TOTAL_CPU_TIME) ||
+				(metrics[i].metric == THREAD_BLOCK_TIME) ||
+				(metrics[i].metric == THREAD_GCC_TIME) ||
+				(metrics[i].metric == THREAD_SYSTEM_CPU_TIME) ||
+				(metrics[i].metric == THREAD_TOTAL_CPU_TIME) ||
+				(metrics[i].metric == THREAD_USER_CPU_TIME) ||
+				(metrics[i].metric == THREAD_WAIT_TIME) ||
+				(metrics[i].metric == WALL_CLOCK_TIME)) {
+			return d3.format(".4")(value) + "ms";
+		} else if ((metrics[i].metric == SYSTEM_OPEN_FILE_DESCRIPTOR_COUNT) ||
+				(metrics[i].metric == THREAD_BLOCK_COUNT) ||
+				(metrics[i].metric == THREAD_COUNT) ||
+				(metrics[i].metric == THREAD_GCC_COUNT) ||
+				(metrics[i].metric == THREAD_WAIT_COUNT)) {
+			return value;
 		}
 	}
+
 };
 
 Chart.prototype.processData = function(data) {
@@ -204,9 +278,9 @@ Chart.prototype.computeScales = function() {
 	this.maxY = -Infinity;
 
 	// Compute x- and y-extent.
-	var metrics = this.chartMetrics.keys();
+	var metrics = this.chartMetrics;
 	for (var j = 0; j < metrics.length; j++) {
-		var data = this.chartMetrics.get(metrics[j]);
+		var data = metrics[j].data;
 		for ( var i = 0, n = data.length, o; i < n; i++) {
 			o = data[i];
 			if (o.y > this.maxY)
@@ -227,16 +301,50 @@ function getFill(metric) {
 		return 1;
 	} else if (metric == IO_WRITE) {
 		return 2;
+	} else if (metric == IDLE_CPU_LOAD) {
+		return 3;
+	} else if (metric == IDLE_CPU_TIME) {
+		return 4;
+	} else if (metric == IRQ_CPU_LOAD) {
+		return 5;
+	} else if (metric == IRQ_CPU_TIME) {
+		return 6;
+	} else if (metric == SWAP_IN) {
+		return 7;
+	} else if (metric == SWAP_OUT) {
+		return 8;
+	} else if (metric == SYSTEM_CPU_LOAD) {
+		return 9;
+	} else if (metric == SYSTEM_CPU_TIME) {
+		return 10;
+	} else if (metric == SYSTEM_LOAD_AVERAGE) {
+		return 11;
+	} else if (metric == SYSTEM_OPEN_FILE_DESCRIPTOR_COUNT) {
+		return 12;
+	} else if (metric == TOTAL_SYSTEM_FREE_MEMORY) {
+		return 13;
+	} else if (metric == TOTAL_SYSTEM_USED_MEMORY) {
+		return 14;
+	} else if (metric == TOTAL_SYSTEM_USED_SWAP) {
+		return 15;
+	} else if (metric == USER_CPU_LOAD) {
+		return 16;
+	} else if (metric == USER_CPU_TIME) {
+		return 17;
+	} else if (metric == WAIT_CPU_LOAD) {
+		return 18;
+	} else if (metric == WAIT_CPU_TIME) {
+		return 19;
 	}
 }
 
 Chart.prototype.drawMetric = function(metric) {
 	var chart = this;
 	
-	this.focusArea.append("svg:path").data([ this.chartMetrics.get(metric) ])
+	this.focusArea.append("svg:path").data([ metric.data ])
 		.attr("class", "chart")
-		.attr("id", validID(metric))
-		.style("fill", chart.fill(getFill(metric)))
+		.attr("id", validID(metric.metric))
+		.style("fill", chart.fill(getFill(metric.metric)))
 		.attr("d", d3.svg.area().x(function(d) {return chart.x(d.x);})
 			// .y0(y1(0))
 			.y0(this.y1(this.minY))
@@ -245,10 +353,10 @@ Chart.prototype.drawMetric = function(metric) {
 			}));
 
 	this.context.append("svg:path")
-		.data([this.chartMetrics.get(metric)])
+		.data([metric.data])
 		.attr("class", "chart")
 		.attr("pointer-events", "none")
-		.style("fill", chart.fill(getFill(metric)))
+		.style("fill", chart.fill(getFill(metric.metric)))
 		.attr("d", d3.svg.area().x(function(d) {
 			return chart.x(d.x);
 		})
@@ -267,6 +375,9 @@ Chart.prototype.drawChart = function() {
 	this.y1.domain([ this.minY, this.maxY ]);
 	this.y2.domain([ this.minY, this.maxY ]);
 
+	this.chartSvgArea.select("rect").remove();
+	this.chartSvgArea.select("text").remove();
+	
 	// Focus view.
 	this.focusArea.select("path").remove();
 
@@ -353,10 +464,10 @@ Chart.prototype.drawChart = function() {
 		.text(shortTime(new Date(this.maxX)));	
 
 	// Active focus region.
-	this.context.select("rect#active").remove();
+	this.context.select("rect#" + this.id + "active").remove();
 	this.active = this.context.append("svg:rect")
 			.attr("pointer-events", "none")
-			.attr("id", "active")
+			.attr("id", this.id + "active")
 			.attr("x", this.x(this.x0 = this.minX))
 			.attr("y", 0)
 			.attr("height", this.h2)

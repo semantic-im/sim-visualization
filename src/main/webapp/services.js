@@ -28,3 +28,8 @@ function getChilds(node, callback, async) {
 function getMetricData(node, callback) {
 	ajaxCall("metric", callback, node, false);
 }
+function getMethods() {
+	var theResult = null;
+	ajaxCall("methods", function(result) {theResult = result;}, null, false);
+	return theResult;
+}

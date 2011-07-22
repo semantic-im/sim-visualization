@@ -1,0 +1,13 @@
+PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>
+
+select ?metricid ?timestamp ?value ?methodExecution
+	where {
+		{
+			?metricid rdf:type $metric$ .
+			?metricid :hasTimeStamp ?timestamp .
+			?metricid :hasDataValue ?value .
+			?methodExecution :hasMeasurement ?metricid .
+			?methodExecution :isMethodExecutionOf $method$ .
+		}
+	}
+order by ?timestamp

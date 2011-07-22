@@ -92,6 +92,7 @@ public class VisualizationServerApp extends Application {
 		router.attach("/ontology/name", OntologyNameResource.class);
 		router.attach("/ontology/browse", OntologyBrowseResource.class);
 		router.attach("/metric", MetricResource.class);
+		router.attach("/methods", MethodsResource.class);
 		
 		return router;
 	}
