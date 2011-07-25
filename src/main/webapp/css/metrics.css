@@ -1,3 +1,29 @@
+body {
+	margin: 0;
+}
+
+#metrics-selector {
+	position: absolute;
+	/*float: left;*/
+	background: Thistle;
+	border-top-right-radius: 10px;
+	border-bottom-right-radius: 10px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+#metrics-selector-toggle {
+	position: absolute;
+	background: Plum;
+	border-top-left-radius: 10px;
+	border-bottom-left-radius: 10px;
+	cursor: pointer;
+}
+
+#metrics-selector-toggle.mouseover {
+	background: Violet;
+}
+	
 .metric-container {
 	display: inline-block;
 	padding: 0;
@@ -41,3 +67,18 @@ line.chart {
 	font-family: Verdana; 
 	vertical-align: middle;
 }
+
+.metrics-title-label {
+	font-family: Verdana;
+	font-size: 12px;
+	font-weight: bold;
+	color: black;
+}
+
+.metrics-title {
+	display: block;
+	border-bottom: 1px solid black;
+	margin-bottom: 5px;
+}
+	
+	

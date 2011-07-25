@@ -116,10 +116,45 @@ function getLabel(metric) {
 	}
 }
 
-$(function() {
-	var metricsSelector = d3.select("#metrics-selector");
+$(document).ready(function() {
+	var metricsSelectorHeight = (clientHeight - clientHeight * 0.1);
+	var metricsSelectorPaddingHeight = 10;
+	var metricsSelectorWidth = 450;
+	var metricsSelector = d3.select("#metrics-selector")
+		.style("height", metricsSelectorHeight + "px")
+		.style("width", metricsSelectorWidth + "px")
+		.style("padding-top", 10 + "px")
+		.style("padding-bottom", 10 + "px")
+		.style("top", ((clientHeight - metricsSelectorHeight - (metricsSelectorPaddingHeight * 2)) / 2) + "px");
+
+	var metricsSelectorToggle = d3.select("#metrics-selector-toggle")
+		.style("height", (metricsSelectorHeight) + "px")
+		.style("width", 10 + "px")
+		.style("top", 10 + "px")
+		.style("left", (metricsSelectorWidth - 10) + "px")
+		.on("mouseover", metricsSelectorToggleMouseover)
+		.on("mouseout", metricsSelectorToggleMouseout);
 	
-	var systemMetricsDiv = metricsSelector.append("div")
+	//callback function to bring a hidden box back
+	function metricsSelectorToggleHideCallback() {
+		d3.select("#metrics-selector").style("left", "-440px");
+		$('#metrics-selector').show().fadeIn();
+	};
+	
+	var hidden = false;
+	$("#metrics-selector-toggle").click(function () {
+		if (!hidden) {
+			d3.select("#methods").style("display", "none");
+			$("#metrics-selector").hide("slide", { direction: "left", distance: 440 }, 1000, metricsSelectorToggleHideCallback);
+		} else {
+			d3.select("#metrics-selector").style("left", "0px");
+			$("#metrics-selector").show("slide", { direction: "left", distance: 440 }, 1000);
+		}
+		hidden = !hidden;
+	});
+
+	var systemMetricsSelector = d3.select("#system-metrics-selector");
+	var systemMetricsDiv = systemMetricsSelector.append("div")
 		.style("display", "inline-block");
 		//.style("float", "left");
 	for (var i = 0; i < systemMetrics.length; i++) {
@@ -143,12 +178,13 @@ $(function() {
 			helper: 'clone', 
 			opacity: 0.7});
 		if ((i + 1) % 4 == 0) {
-			systemMetricsDiv.append("br");
+			//systemMetricsDiv.append("br");
 		}
 	}
 
+	var displaySettings = d3.select("#display-settings");
 	// CHART GRID
-	var gridDiv = metricsSelector.append("div")
+	var gridDiv = displaySettings.append("div")
 		.style("display", "inline-block")
 		.style("vertical-align", "top")
 		.style("text-align", "center")
@@ -183,7 +219,8 @@ $(function() {
 		.text("2x2");		
 	//~
 	
-	var methodMetricsDiv = metricsSelector.append("div")
+	var methodMetricsSelector = d3.select("#method-metrics-selector");
+	var methodMetricsDiv = methodMetricsSelector.append("div")
 		.style("display", "inline-block")
 		.style("vertical-align", "top");
 		//.style("float", "right");
@@ -218,11 +255,11 @@ $(function() {
 		});
 		
 		if ((i + 1) % 4 == 0) {
-			methodMetricsDiv.append("br");
+			//methodMetricsDiv.append("br");
 		}
 	}
 
-	var methodsDiv = metricsSelector.append("div")
+	var methodsDiv = d3.select("body").append("div")
 		.attr("id", "methods")
 		.style("display", "none")
 		.style("position", "absolute")
@@ -378,4 +415,14 @@ function displayChart2x2() {
 	setDroppable(chart4);
 	chart4.init(chartColors(4));
 
+}
+
+function metricsSelectorToggleMouseover() {
+	d3.select("#metrics-selector-toggle")
+		.classed("mouseover", true);
+}
+
+function metricsSelectorToggleMouseout() {
+	d3.select("#metrics-selector-toggle")
+		.classed("mouseover", false);
 }

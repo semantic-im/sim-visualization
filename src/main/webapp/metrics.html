@@ -9,6 +9,19 @@
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.mouse.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.draggable.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.droppable.js"></script>
+    <script type="text/javascript" src="./jquery.ui/ui/jquery.effects.core.js"></script>
+	<!-- script type="text/javascript" src="./jquery.ui/ui/jquery.effects.blind.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.bounce.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.clip.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.drop.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.explode.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.fold.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.highlight.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.pulsate.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.scale.js"></script> 
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.shake.js"></script --> 
+    <script type="text/javascript" src="./jquery.ui/ui/jquery.effects.slide.js"></script>
+
     <script type="text/javascript" src="./jshashtable-2.1.js"></script>
     <script type="text/javascript" src="./jshashset.js"></script>
     <script type="text/javascript" src="./d3/d3.js"></script>
@@ -25,22 +38,23 @@
    	<script type="text/javascript" src="main.js"></script>
    	<script type="text/javascript" src="chart.js"></script>
    	<script type="text/javascript" src="metrics.js"></script>
+   	
     <div id="metrics-selector">
-    	<!-- 
-    	<div id="ioReadContainer" class="metric-container">
-    		<canvas id="ioReadIcon" width="16" height="16" class="metric-icon"></canvas>
-    		<span class="metric-label">IO Read</span>
+    	<div id="metrics-selector-toggle">
     	</div>
-    	<div id="ioWriteContainer" class="metric-container">
-    		<canvas id="ioWriteIcon" width="16" height="16" class="metric-icon"></canvas>
-    		<span class="metric-label">IO Write</span>
+    	<div id="system-metrics-selector">
+    		<span class="metrics-title metrics-title-label">System Metrics</span>
     	</div>
-    	<div id="idleCPULoadContainer" class="metric-container">
-    		<canvas id="idleCPULoadIcon" width="16" height="16" class="metric-icon"></canvas>
-    		<span class="metric-label">Idle CPU Load</span>
+    	<br/>
+    	<div id="display-settings">
+    		<span class="metrics-title metrics-title-label">Display settings</span>
     	</div>
-    	 -->
+    	<br/>
+    	<div id="method-metrics-selector">
+    		<span class="metrics-title metrics-title-label">Method Metrics</span>
+    	</div>
     </div>
+    
     <div id="charts">
     </div>
   </body>

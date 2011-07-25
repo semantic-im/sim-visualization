@@ -65,8 +65,8 @@ var methodMetrics = [ PROCESS_TOTAL_CPU_TIME,
                 	THREAD_WAIT_TIME,
                 	WALL_CLOCK_TIME];
 
-var clientWidth = window.innerWidth - 20,//document.all.ontoview.clientWidth,
-	clientHeight = window.innerHeight - 20,//document.all.ontoview.clientHeight;
+var clientWidth = window.innerWidth - 2,//document.all.ontoview.clientWidth,
+	clientHeight = window.innerHeight - 1,//document.all.ontoview.clientHeight;
 	clientTop = 10,
 	clientLeft = 10;
 	//fill = d3.scale.category10();
