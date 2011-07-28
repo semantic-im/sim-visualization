@@ -4,12 +4,19 @@ body {
 
 #metrics-selector {
 	position: absolute;
+	z-index: 1;
 	/*float: left;*/
 	background: Thistle;
 	border-top-right-radius: 10px;
 	border-bottom-right-radius: 10px;
 	padding-top: 10px;
 	padding-bottom: 10px;
+	
+	/* transparency*/
+	zoom: 1;
+    filter: alpha(opacity=90);
+    opacity: 0.9;
+    /*~*/
 }
 
 #metrics-selector-toggle {
@@ -23,11 +30,43 @@ body {
 #metrics-selector-toggle.mouseover {
 	background: Violet;
 }
+
+#metrics-selector-slider {
+	position: absolute;
+}
+
+/*
+.ui-slider-handle {
+  width: 8px;
+  height: 14px;
+  position: absolute;
+  top: -4px;
+  background: #478AFF;
+  border: solid 1px black;
+}
+*/
+
+#metrics-selector-scroll {
+  overflow: hidden;
+}
+
+#charts-dashboard {
+	position: absolute;
+	border: 1px solid black;
+	overflow: auto;
+	z-index: -1;
+}
+
+.chart {
+	position: absolute;
+	border: 1px solid black;
+	display: inline-block;
+}
 	
 .metric-container {
 	display: inline-block;
 	padding: 0;
-	width: 220px;
+	width: 200px;
 	cursor: pointer;
 }
 
@@ -40,9 +79,10 @@ body {
 .metric-label {
 	white-space: nowrap;
 	color: #333333; 
-	font-size: 12px; 
+	font-size: 10px; 
 	font-family: Verdana; 
 	vertical-align: middle;
+	padding-left: 2px;
 }
 
 path.chart {
@@ -77,7 +117,7 @@ line.chart {
 
 .metrics-title {
 	display: block;
-	border-bottom: 1px solid black;
+	//border-bottom: 1px solid black;
 	margin-bottom: 5px;
 }
 	

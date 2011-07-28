@@ -9,6 +9,7 @@
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.mouse.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.draggable.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.droppable.js"></script>
+    <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.slider.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.effects.core.js"></script>
 	<!-- script type="text/javascript" src="./jquery.ui/ui/jquery.effects.blind.js"></script> 
 	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.bounce.js"></script> 
@@ -31,8 +32,8 @@
     <script type="text/javascript" src="./d3/d3.time.js"></script>
     <script type="text/javascript" src="services.js"></script>
     <script type="text/javascript" src="arrowhead.js"></script>
-    <link type="text/css" rel="stylesheet" href="./css/metrics.css"/>
     <link type="text/css" rel="stylesheet" href="./jquery.ui/themes/base/jquery.ui.all.css"/>
+    <link type="text/css" rel="stylesheet" href="./css/metrics.css"/>
   </head>
   <body>
    	<script type="text/javascript" src="main.js"></script>
@@ -42,20 +43,38 @@
     <div id="metrics-selector">
     	<div id="metrics-selector-toggle">
     	</div>
-    	<div id="system-metrics-selector">
-    		<span class="metrics-title metrics-title-label">System Metrics</span>
+    	<div id="metrics-selector-slider">
     	</div>
-    	<br/>
-    	<div id="display-settings">
-    		<span class="metrics-title metrics-title-label">Display settings</span>
-    	</div>
-    	<br/>
-    	<div id="method-metrics-selector">
-    		<span class="metrics-title metrics-title-label">Method Metrics</span>
-    	</div>
+    	<div id="metrics-selector-scroll">
+    		<div id="metrics-selector-content">
+		    	<div id="display-settings">
+		    		<span class="metrics-title metrics-title-label">Display settings</span>
+		    	</div>
+		    	<br/>
+		    	<div id="system-metrics-selector">
+		    		<span class="metrics-title metrics-title-label">System Metrics</span>
+		    	</div>
+		    	<br/>
+		    	<div id="method-metrics-selector">
+		    		<span class="metrics-title metrics-title-label">Method Metrics</span>
+		    	</div>
+		    	<br/>
+		    	<div id="platform-metrics-selector">
+		    		<span class="metrics-title metrics-title-label">Platform Metrics</span>
+		    	</div>
+		    	<br/>
+		    	<div id="compound-metrics-selector">
+		    		<span class="metrics-title metrics-title-label">Compound Metrics</span>
+		    	</div>
+		    	<br/>
+		    	<div id="atomic-metrics-selector">
+		    		<span class="metrics-title metrics-title-label">Atomic Metrics</span>
+		    	</div>
+		    </div>
+	    </div>
     </div>
     
-    <div id="charts">
+    <div id="charts-dashboard">
     </div>
   </body>
 </html>

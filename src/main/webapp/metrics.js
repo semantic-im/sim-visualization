@@ -1,3 +1,10 @@
+var	chartsDashboardHeight = clientHeight - 2 - 2, //2 from the border + 2 to not make it to fix
+	chartsDashboardWidth = clientWidth - 2 - 2; //2 from the border + 2 to not make it to fix
+
+var PLATFORM_METRIC_ICON_COLOR = "#8c564b",
+	COMPOUND_METRIC_ICON_COLOR = "#17becf",
+	ATOMIC_METRIC_ICON_COLOR = "#2ca02c";
+
 var methods = getMethods();
 var selectedMethodMetric ;
 var grid = "r1x1";
@@ -48,74 +55,6 @@ function drawTriangle(canvas) {
 	context.fill();		
 }
 
-function getLabel(metric) {
-	if (metric == IO_READ) {
-		return 'IO Read';
-	} else if (metric == IO_WRITE) {
-		return 'IO Write';
-	} else if (metric == IDLE_CPU_LOAD) {
-		return 'Idle CPU Load';
-	} else if (metric == IDLE_CPU_TIME) {
-		return 'Idle CPU Time';
-	} else if (metric == IRQ_CPU_LOAD) {
-		return 'Irq CPU Load';
-	} else if (metric == IRQ_CPU_TIME) {
-		return 'Irq CPU Time';
-	} else if (metric == SWAP_IN) {
-		return 'Swap In';
-	} else if (metric == SWAP_OUT) {
-		return 'Swap Out';
-	} else if (metric == SYSTEM_CPU_LOAD) {
-		return 'System CPU Load';
-	} else if (metric == SYSTEM_CPU_TIME) {
-		return 'System CPU Time';
-	} else if (metric == SYSTEM_LOAD_AVERAGE) {
-		return 'System Load Average';
-	} else if (metric == SYSTEM_OPEN_FILE_DESCRIPTOR_COUNT) {
-		return 'System open file descriptor count';
-	} else if (metric == TOTAL_SYSTEM_FREE_MEMORY) {
-		return 'Total System Free Memory';
-	} else if (metric == TOTAL_SYSTEM_USED_MEMORY) {
-		return 'Total System Used Memory';
-	} else if (metric == TOTAL_SYSTEM_USED_SWAP) {
-		return 'Total System Used Swap';
-	} else if (metric == USER_CPU_LOAD) {
-		return 'User CPU Load';
-	} else if (metric == USER_CPU_TIME) {
-		return 'User CPU Time';
-	} else if (metric == WAIT_CPU_LOAD) {
-		return 'Wait CPU Load';
-	} else if (metric == WAIT_CPU_TIME) {
-		return 'Wait CPU Time';
-	}
-	//method metrics
-	  else if (metric == PROCESS_TOTAL_CPU_TIME) {
-			return 'Process Total CPU time';
-	} else if (metric == THREAD_BLOCK_COUNT) {
-			return 'Thread Block Count';
-	} else if (metric == THREAD_BLOCK_TIME) {
-			return 'Thread Block Time';
-	} else if (metric == THREAD_COUNT) {
-			return 'Thread Count';
-	} else if (metric == THREAD_GCC_COUNT) {
-			return 'Thread Gcc Count';
-	} else if (metric == THREAD_GCC_TIME) {
-			return 'Thread Gcc Time';
-	} else if (metric == THREAD_SYSTEM_CPU_TIME) {
-			return 'Thread System CPU Time';
-	} else if (metric == THREAD_TOTAL_CPU_TIME) {
-			return 'Thread Total CPU Time';
-	} else if (metric == THREAD_USER_CPU_TIME) {
-			return 'Thread User CPU Time';
-	} else if (metric == THREAD_WAIT_COUNT) {
-			return 'Thread Wait Count';
-	} else if (metric == THREAD_WAIT_TIME) {
-			return 'Thread Wait Time';
-	} else if (metric == WALL_CLOCK_TIME) {
-			return 'Wallclock Time';
-	}
-}
-
 $(document).ready(function() {
 	var metricsSelectorHeight = (clientHeight - clientHeight * 0.1);
 	var metricsSelectorPaddingHeight = 10;
@@ -125,13 +64,25 @@ $(document).ready(function() {
 		.style("width", metricsSelectorWidth + "px")
 		.style("padding-top", 10 + "px")
 		.style("padding-bottom", 10 + "px")
+		.style("padding-left", 5 + "px")
 		.style("top", ((clientHeight - metricsSelectorHeight - (metricsSelectorPaddingHeight * 2)) / 2) + "px");
 
+	d3.select("#metrics-selector-scroll")
+		.style("height", (metricsSelectorHeight - 20) + "px")
+		.style("width", (metricsSelectorWidth - 20) + "px") //substract the slider and the toggle width
+		.style("position", "relative");
+
+	d3.select("#metrics-selector-content")
+		.style("width", (metricsSelectorWidth - 20) + "px") //substract the slider and the toggle width
+		.style("position", "relative");
+
+	//METRICS SELECTOR TOGGLE
 	var metricsSelectorToggle = d3.select("#metrics-selector-toggle")
+		.style("position", "absolute")
 		.style("height", (metricsSelectorHeight) + "px")
 		.style("width", 10 + "px")
 		.style("top", 10 + "px")
-		.style("left", (metricsSelectorWidth - 10) + "px")
+		.style("left", (metricsSelectorWidth - (10 - 5)) + "px") //substract this element width - the left pading of parent
 		.on("mouseover", metricsSelectorToggleMouseover)
 		.on("mouseout", metricsSelectorToggleMouseout);
 	
@@ -152,38 +103,50 @@ $(document).ready(function() {
 		}
 		hidden = !hidden;
 	});
-
-	var systemMetricsSelector = d3.select("#system-metrics-selector");
-	var systemMetricsDiv = systemMetricsSelector.append("div")
-		.style("display", "inline-block");
-		//.style("float", "left");
-	for (var i = 0; i < systemMetrics.length; i++) {
-		var systemMetricId = validID(systemMetrics[i]);
-		var div = systemMetricsDiv.append("div")
-			.attr("id",  systemMetricId + "Container")
-			.attr("data", i)
-			.attr("class",  "metric-container");
-		div.append("canvas")
-			.attr("id", systemMetricId + "Icon")
-			.attr("width", "16")
-			.attr("height", "16")
-			.attr("class", "metric-icon");
-		div.append("span")
-			.attr("class", "metric-label")
-			.text(getLabel(systemMetrics[i]));
+	//~~
+	
+	//~add div for draggable over all divs
+	d3.select("body").append("div").attr("id", "for-dragging")
+		.style("position", "absolute").style("width", clientWidth).style("height", clientHeight)
+		.style("z-index", "99");
 		
-		drawCircle($('#' + systemMetricId + 'Icon')[0], 8, "#ff7f0e");
-		
-		$('#' + systemMetricId + 'Container').draggable({
-			helper: 'clone', 
-			opacity: 0.7});
-		if ((i + 1) % 4 == 0) {
-			//systemMetricsDiv.append("br");
-		}
+	//~~
+	
+	//METRICS SELECTOR SLIDER
+	var metricsSelectorSlider = d3.select("#metrics-selector-slider")
+		.style("height", (metricsSelectorHeight - 20) + "px") //sbustract 20 for whn the slider is at min or max
+		.style("width", 10 + "px")
+		.style("top", (10 + 10) + "px") //add 10 for the reason explained on height
+		.style("left", (metricsSelectorWidth - 20) + "px");
+	
+	function handleSliderChange(e, ui) {
+	  var maxScroll = $("#metrics-selector-scroll").attr("scrollHeight") -
+	                  $("#metrics-selector-scroll").height();	  
+	  var scroll = (100 - ui.value) * (maxScroll / 100);
+	  $("#metrics-selector-scroll").animate({scrollTop: scroll }, 1000);
 	}
 
-	var displaySettings = d3.select("#display-settings");
+	function handleSliderSlide(e, ui)
+	{
+	  var maxScroll = $("#metrics-selector-scroll").attr("scrollHeight") -
+	                  $("#metrics-selector-scroll").height();
+	  var scroll = (100 - ui.value) * (maxScroll / 100);
+	  $("#metrics-selector-scroll").attr({scrollTop: scroll });
+	}
+	
+	$("#metrics-selector-slider").slider({
+	    animate: true,
+	    orientation: "vertical",
+		min: 0,
+		max: 100,
+		value: 100,
+	    change: handleSliderChange,
+	    slide: handleSliderSlide
+	  });
+	//~~
+
 	// CHART GRID
+	var displaySettings = d3.select("#display-settings");
 	var gridDiv = displaySettings.append("div")
 		.style("display", "inline-block")
 		.style("vertical-align", "top")
@@ -198,6 +161,7 @@ $(document).ready(function() {
 		.attr("checked", "true")
 		.on("click", gridChanged);
 	gridDiv.append("span")
+		.attr("class", "metrics-title-label")
 		.text("1x1");		
 	gridDiv.append("br");
 	gridDiv.append("input")
@@ -207,6 +171,7 @@ $(document).ready(function() {
 		.attr("value", "r2x1")
 		.on("click", gridChanged);
 	gridDiv.append("span")
+		.attr("class", "metrics-title-label")
 		.text("2x1");		
 	gridDiv.append("br");
 	gridDiv.append("input")
@@ -216,9 +181,41 @@ $(document).ready(function() {
 		.attr("value", "r2x2")
 		.on("click", gridChanged);
 	gridDiv.append("span")
+		.attr("class", "metrics-title-label")
 		.text("2x2");		
 	//~
-	
+
+	//SYSTEM METRICS
+	var systemMetricsSelector = d3.select("#system-metrics-selector");
+	var systemMetricsDiv = systemMetricsSelector.append("div")
+		.style("display", "inline-block");
+		//.style("float", "left");
+	for (var i = 0; i < systemMetrics.length; i++) {
+		var systemMetricId = validID(systemMetrics[i]);
+		var div = systemMetricsDiv.append("div")
+			.attr("id",  systemMetricId + "Container")
+			.attr("data", i)
+			.attr("class",  "metric-container");
+		div.append("canvas")
+			.attr("id", systemMetricId + "Icon")
+			.attr("width", "12")
+			.attr("height", "12")
+			.attr("class", "metric-icon");
+		div.append("span")
+			.attr("class", "metric-label")
+			.text(systemMetricLabels[i]);
+		
+		drawCircle($('#' + systemMetricId + 'Icon')[0], 6, "#ff7f0e");
+		
+		$('#' + systemMetricId + 'Container').draggable({
+			appendTo: '#for-dragging',
+			scroll: false,
+			helper: 'clone', 
+			opacity: 0.7});
+	}
+	//~~
+		
+	//METHOD METRICS
 	var methodMetricsSelector = d3.select("#method-metrics-selector");
 	var methodMetricsDiv = methodMetricsSelector.append("div")
 		.style("display", "inline-block")
@@ -228,18 +225,18 @@ $(document).ready(function() {
 		var methodMetricId = validID(methodMetrics[i]);
 		var div = methodMetricsDiv.append("div")
 			.attr("id",  methodMetricId + "Container")
-			.attr("data", i)
+			.attr("data",  i)
 			.attr("class",  "metric-container");
 		div.append("canvas")
 			.attr("id", methodMetricId + "Icon")
-			.attr("width", "16")
-			.attr("height", "16")
+			.attr("width", "12")
+			.attr("height", "12")
 			.style("pointer-events", "none")
 			.attr("class", "metric-icon");
 		div.append("span")
 			.attr("class", "metric-label")
 			.style("pointer-events", "none")
-			.text(getLabel(methodMetrics[i]));
+			.text(methodMetricLabels[i]);
 		div.append("canvas")
 			.attr("id", methodMetricId + "Icon1")
 			.attr("width", "16")
@@ -247,22 +244,19 @@ $(document).ready(function() {
 			.style("pointer-events", "none")
 			.attr("class", "metric-icon");
 
-		drawCircle($('#' + methodMetricId + 'Icon')[0], 8, "#1f77b4");
+		drawCircle($('#' + methodMetricId + 'Icon')[0], 6, "#1f77b4");
 		drawTriangle($('#' + methodMetricId + 'Icon1')[0]);
 		
 		$("#" + methodMetricId + "Container").click(function(eventObject) {
 			displayMethods(eventObject);
 		});
-		
-		if ((i + 1) % 4 == 0) {
-			//methodMetricsDiv.append("br");
-		}
 	}
 
 	var methodsDiv = d3.select("body").append("div")
 		.attr("id", "methods")
 		.style("display", "none")
 		.style("position", "absolute")
+		.style("z-index", "2")
 		.style("height", "300px")
 		.style("border", "1px solid black")
 		.style("background", "white");
@@ -302,17 +296,121 @@ $(document).ready(function() {
 		drawCircle($('#' + methodId + 'Icon')[0], 6, "#2ca02c");
 		
 		$('#' + methodId + 'Container').draggable({
-			appendTo: 'body',
+			appendTo: '#for-dragging',
 			scroll: false,
 			helper: 'clone', 
 			opacity: 0.7});
 	}
+	//~~
+	
+	//PLATFORM METRICS
+	var platformMetricsSelector = d3.select("#platform-metrics-selector");
+	var platformMetricsDiv = platformMetricsSelector.append("div")
+		.style("display", "inline-block");
+		//.style("float", "right");
+	for (var i = 0; i < platformMetrics.length; i++) {
+		var platformMetricId = validID(platformMetrics[i]);
+		var div = platformMetricsDiv.append("div")
+			.attr("id",  platformMetricId + "Container")
+			.attr("data", systemMetrics.length + methods.length + i)
+			.attr("class",  "metric-container");
+		div.append("canvas")
+			.attr("id", platformMetricId + "Icon")
+			.attr("width", "12")
+			.attr("height", "12")
+			.style("pointer-events", "none")
+			.attr("class", "metric-icon");
+		div.append("span")
+			.attr("class", "metric-label")
+			.style("pointer-events", "none")
+			.text(platformMetricLabels[i]);
+
+		drawCircle($('#' + platformMetricId + 'Icon')[0], 6, PLATFORM_METRIC_ICON_COLOR);
 		
+		$('#' + platformMetricId + 'Container').draggable({
+			appendTo: '#for-dragging',
+			scroll: false,
+			helper: 'clone', 
+			opacity: 0.7});
+	}
+	//~~
+
+	//COMPOUND METRICS
+	var compoundMetricsSelector = d3.select("#compound-metrics-selector");
+	var compoundMetricsDiv = compoundMetricsSelector.append("div")
+		.style("display", "inline-block");
+		//.style("float", "right");
+	for (var i = 0; i < compoundMetrics.length; i++) {
+		var compoundMetricId = validID(compoundMetrics[i]);
+		var div = compoundMetricsDiv.append("div")
+			.attr("id",  compoundMetricId + "Container")
+			.attr("data", systemMetrics.length + methods.length + platformMetrics.length + i)
+			.attr("class",  "metric-container");
+		div.append("canvas")
+			.attr("id", compoundMetricId + "Icon")
+			.attr("width", "12")
+			.attr("height", "12")
+			.style("pointer-events", "none")
+			.attr("class", "metric-icon");
+		div.append("span")
+			.attr("class", "metric-label")
+			.style("pointer-events", "none")
+			.text(compoundMetricLabels[i]);
+
+		drawCircle($('#' + compoundMetricId + 'Icon')[0], 6, COMPOUND_METRIC_ICON_COLOR);
+		
+		$('#' + compoundMetricId + 'Container').draggable({
+			appendTo: '#for-dragging',
+			scroll: false,
+			helper: 'clone', 
+			opacity: 0.7});
+	}
+	//~~
+
+	//ATOMIC METRICS
+	var atomicMetricsSelector = d3.select("#atomic-metrics-selector");
+	var atomicMetricsDiv = atomicMetricsSelector.append("div")
+		.style("display", "inline-block");
+		//.style("float", "right");
+	for (var i = 0; i < atomicMetrics.length; i++) {
+		var atomicMetricId = validID(atomicMetrics[i]);
+		var div = atomicMetricsDiv.append("div")
+			.attr("id",  atomicMetricId + "Container")
+			.attr("data", systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length + i)
+			.attr("class",  "metric-container");
+		div.append("canvas")
+			.attr("id", atomicMetricId + "Icon")
+			.attr("width", "12")
+			.attr("height", "12")
+			.style("pointer-events", "none")
+			.attr("class", "metric-icon");
+		div.append("span")
+			.attr("class", "metric-label")
+			.style("pointer-events", "none")
+			.text(atomicMetricLabels[i]);
+
+		drawCircle($('#' + atomicMetricId + 'Icon')[0], 6, ATOMIC_METRIC_ICON_COLOR);
+		
+		$('#' + atomicMetricId + 'Container').draggable({
+			appendTo: '#for-dragging',
+			scroll: false,
+			helper: 'clone', 
+			opacity: 0.7});
+	}
+	//~~
+
+	d3.select("#charts-dashboard")
+		.style("width", chartsDashboardWidth + "px")
+		.style("height", chartsDashboardHeight + "px")
+		.style("top", 2 + "px")
+		.style("left", 2 + "px");
+	
 	displayChart1x1();
 });
 
 function displayMethods(event) {
-	selectedMethodMetric = methodMetrics[d3.select("#" + event.target.id).attr("data")];
+	var dataIndex = d3.select("#" + event.target.id).attr("data");
+	selectedMethodMetric = methodMetrics[dataIndex];
 	
 	var methodsDiv = d3.select("#methods");
 	methodsDiv.style("display", "inline-block");
@@ -320,7 +418,7 @@ function displayMethods(event) {
 	methodsDiv.style("left", event.pageX + "px");
 	
 	var methodsHeaderLabelDiv = d3.select("#methodsHeaderLabel");
-	methodsHeaderLabelDiv.text(getLabel(selectedMethodMetric));
+	methodsHeaderLabelDiv.text(methodMetricLabels[dataIndex]);
 };
 
 function closeMethods() {
@@ -359,59 +457,89 @@ function setDroppable(chart) {
 			var dataIndex = ui.draggable.attr("data");
 			if (dataIndex < systemMetrics.length) {
 				chart.addMetricToChart(systemMetrics[dataIndex]);
-			} else {
+			} else if (dataIndex < systemMetrics.length + methods.length ) {
 				chart.addMetricToChart(selectedMethodMetric, methods[dataIndex - systemMetrics.length]);
+			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length) {
+				chart.addMetricToChart(platformMetrics[dataIndex - systemMetrics.length - methods.length]);
+			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length) {
+				chart.addMetricToChart(compoundMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length]);
+			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length + atomMetrics.length) {
+				chart.addMetricToChart(atomMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length]);
 			}
 		}
 	});
 }
 
 function displayChart1x1() {
-	d3.select("#charts").append("div").attr("id", "chart1");
+	d3.select("#charts-dashboard").append("div").attr("id", "chart1")
+		.attr("class", "chart")
+		.style("height", (chartsDashboardHeight - 2) + "px")
+		.style("width", (chartsDashboardWidth - 2) + "px");
 	
-	chart1 = new Chart("chart1", (clientWidth * 100) / 100, (clientHeight * 95) / 100);
+	chart1 = new Chart("chart1", chartsDashboardWidth - 2, chartsDashboardHeight - 2);
 	setDroppable(chart1);
 	chart1.init(chartColors(1));
 }
 
 function displayChart2x1() {
-	d3.select("#charts").append("div").attr("id", "chart1")
-		.style("display", "inline-block");
+	d3.select("#charts-dashboard").append("div").attr("id", "chart1")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", (chartsDashboardWidth - 2) + "px");
+		//.style("display", "inline-block");
 	
-	chart1 = new Chart("chart1", (clientWidth * 49) / 100, (clientHeight * 95) / 100);
+	chart1 = new Chart("chart1", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	setDroppable(chart1);
 	chart1.init(chartColors(1));
 	
-	d3.select("#charts").append("div").attr("id", "chart2")
-		.style("display", "inline-block");
+	d3.select("#charts-dashboard").append("div").attr("id", "chart2")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", (chartsDashboardWidth - 2) + "px")
+		.style("top", ((chartsDashboardHeight - 2) / 2) + "px")
+		.style("left", 0 + "px");
 	
-	chart2 = new Chart("chart2", (clientWidth * 49) / 100, (clientHeight * 95) / 100);
+	chart2 = new Chart("chart2", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	setDroppable(chart2);
 	chart2.init(chartColors(2));
 }
 
 function displayChart2x2() {
-	d3.select("#charts").append("div").attr("id", "chart1")
-		.style("display", "inline-block");
-	chart1 = new Chart("chart1", (clientWidth * 49) / 100, (clientHeight * 45) / 100);
+	d3.select("#charts-dashboard").append("div").attr("id", "chart1")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px");
+	chart1 = new Chart("chart1", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
 	setDroppable(chart1);
 	chart1.init(chartColors(1));
 	
-	d3.select("#charts").append("div").attr("id", "chart2")
-		.style("display", "inline-block");	
-	chart2 = new Chart("chart2", (clientWidth * 49) / 100, (clientHeight * 45) / 100);
+	d3.select("#charts-dashboard").append("div").attr("id", "chart2")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px")
+		.style("top", 0 + "px")
+		.style("left", ((chartsDashboardWidth - 2) / 2) + "px");
+	chart2 = new Chart("chart2", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
 	setDroppable(chart2);
 	chart2.init(chartColors(2));
 
-	d3.select("#charts").append("div").attr("id", "chart3")
-		.style("display", "inline-block");
-	chart3 = new Chart("chart3", (clientWidth * 49) / 100, (clientHeight * 45) / 100);
+	d3.select("#charts-dashboard").append("div").attr("id", "chart3")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px")
+		.style("top", ((chartsDashboardHeight - 2) / 2) + "px")
+		.style("left", 0 + "px");
+	chart3 = new Chart("chart3", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
 	setDroppable(chart3);
 	chart3.init(chartColors(3));
 
-	d3.select("#charts").append("div").attr("id", "chart4")
-		.style("display", "inline-block");
-	chart4 = new Chart("chart4", (clientWidth * 49) / 100, (clientHeight * 45) / 100);
+	d3.select("#charts-dashboard").append("div").attr("id", "chart4")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px")
+		.style("top", ((chartsDashboardHeight - 2) / 2) + "px")
+		.style("left", ((chartsDashboardWidth - 2) / 2) + "px");
+	chart4 = new Chart("chart4", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
 	setDroppable(chart4);
 	chart4.init(chartColors(4));
 

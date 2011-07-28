@@ -1,8 +1,9 @@
-var p = 20,
+var p,
 	time = d3.time.format("%Y-%m-%dT%H:%M:%S"),
 	shortTime = d3.time.format("%d.%m.%y %H:%M:%S");
 
 function Metric() {
+	this.type = null;
 	this.metric = null;
 	this.method = null;
 	
@@ -23,7 +24,7 @@ function Chart(id, width, height) {
 	
 	this.h1 = ((this.chartHeight * 80) / 100);
 	this.h2 = ((this.chartHeight * 10) / 100);
-	
+	p = this.chartHeight - (this.h1 + this.h2 + 1);
 	this.chartMetrics = new Array();
 	
 	this.x = d3.scale.linear().range([0, this.chartWidth]),
@@ -105,16 +106,18 @@ Chart.prototype.init = function(color) {
 
 	this.chartSvgArea = d3.select("#" + this.id)
 		.append("svg:svg")
-		.attr("width", this.allChartWidth)
-		.attr("height", this.h1 + this.h2 + p)
-		.style("border", "1px solid black");
+		.attr("width", (this.allChartWidth - 4) + "px")
+		.attr("height", (this.chartHeight - 4) + "px")
+		.style("position", "relative")
+		.style("top", 2 + "px")
+		.style("left", 2 + "px");
 	
 	this.chartSvgArea.append("svg:rect")
 			.attr("pointer-events", "none")
-			.attr("x", 0)
-			.attr("y", 0)
-			.attr("height", this.h1 + this.h2 + p)
-			.attr("width", this.allChartWidth)
+			.attr("x", 0 + "px")
+			.attr("y", 0 + "px")
+			.attr("height", (this.chartHeight  - 4)  + "px")
+			.attr("width", (this.allChartWidth - 4) + "px")
 			.attr("fill", color).attr("fill-opacity", .2);
 	this.chartSvgArea.append("svg:text")
 		.attr("font-family", "Verdana")
