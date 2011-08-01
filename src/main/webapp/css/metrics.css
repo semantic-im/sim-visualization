@@ -121,4 +121,38 @@ line.chart {
 	margin-bottom: 5px;
 }
 	
-	
+.legend {
+	position: absolute;
+	font-family: Verdana;
+	font-size: 14px;
+	font-weight: bold;
+	background: WhiteSmoke;
+	border-bottom: 1px solid OrangeRed;
+	border-top-right-radius: 5px;
+	border-top-left-radius: 5px;
+	padding: 2px;
+	color: OrangeRed;
+	cursor: pointer;
+	text-align: center;
+}
+
+.legend-transparent {
+    filter: alpha(opacity=50);
+    opacity: 0.5;
+}
+
+.legend-content {
+	position: absolute;
+	border: 1px solid OrangeRed;
+	background: WhiteSmoke;
+}
+
+.legend-delete {
+	width: 10px;
+	height: 10px;
+	display: inline-block;
+	margin-top: 6px;
+	margin-left: 4px;
+	background: url(./img/delete.png);
+	cursor: pointer;
+}

@@ -332,3 +332,13 @@ if (clientHeight < 600) {
 function validID(id) {
 	return id.replace("#", "_").replace(new RegExp("\\.", "g"), "").replace(new RegExp("/", "g"), "").replace(new RegExp(":", "g"), "").replace(new RegExp("\\$", "g"), "_");
 }
+
+function drawCircle(canvas, radius, color) {
+	var context = canvas.getContext('2d');
+	//context.fillStyle  = "rgba(255, 0, 0, 1)";
+	context.fillStyle  = color;
+	context.beginPath();
+	context.arc(radius, radius, radius, 0, Math.PI*2, true); 
+	context.closePath();
+	context.fill();		
+}

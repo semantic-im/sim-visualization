@@ -6,7 +6,7 @@ var PLATFORM_METRIC_ICON_COLOR = "#8c564b",
 	ATOMIC_METRIC_ICON_COLOR = "#2ca02c";
 
 var methods = getMethods();
-var selectedMethodMetric ;
+var selectedMethodMetric, selectedMethodMetricLabel;
 var grid = "r1x1";
 var chartColors = d3.scale.category10();
 var chart1, chart2, chart3, chart4;
@@ -28,16 +28,6 @@ function drawCloseIcon() {
 	context.lineTo(0, 14);
 	context.lineTo(6, 8);
 	context.lineTo(0, 2);
-	context.closePath();
-	context.fill();		
-}
-
-function drawCircle(canvas, radius, color) {
-	var context = canvas.getContext('2d');
-	//context.fillStyle  = "rgba(255, 0, 0, 1)";
-	context.fillStyle  = color;
-	context.beginPath();
-	context.arc(radius, radius, radius, 0, Math.PI*2, true); 
 	context.closePath();
 	context.fill();		
 }
@@ -411,6 +401,7 @@ $(document).ready(function() {
 function displayMethods(event) {
 	var dataIndex = d3.select("#" + event.target.id).attr("data");
 	selectedMethodMetric = methodMetrics[dataIndex];
+	selectedMethodMetricLabel = methodMetricLabels[dataIndex];
 	
 	var methodsDiv = d3.select("#methods");
 	methodsDiv.style("display", "inline-block");
@@ -456,15 +447,15 @@ function setDroppable(chart) {
 		drop: function( event, ui ) {
 			var dataIndex = ui.draggable.attr("data");
 			if (dataIndex < systemMetrics.length) {
-				chart.addMetricToChart(systemMetrics[dataIndex]);
+				chart.addMetricToChart(systemMetrics[dataIndex], systemMetricLabels[dataIndex]);
 			} else if (dataIndex < systemMetrics.length + methods.length ) {
-				chart.addMetricToChart(selectedMethodMetric, methods[dataIndex - systemMetrics.length]);
+				chart.addMetricToChart(selectedMethodMetric, selectedMethodMetricLabel, methods[dataIndex - systemMetrics.length], methods[dataIndex - systemMetrics.length].substring(methods[dataIndex - systemMetrics.length].lastIndexOf("#") + 1, methods[dataIndex - systemMetrics.length].length));
 			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length) {
-				chart.addMetricToChart(platformMetrics[dataIndex - systemMetrics.length - methods.length]);
+				chart.addMetricToChart(platformMetrics[dataIndex - systemMetrics.length - methods.length], platformMetricLabels[dataIndex - systemMetrics.length - methods.length]);
 			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length) {
-				chart.addMetricToChart(compoundMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length]);
+				chart.addMetricToChart(compoundMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length], compoundMetricLabels[dataIndex - systemMetrics.length - methods.length - platformMetrics.length]);
 			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length + atomMetrics.length) {
-				chart.addMetricToChart(atomMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length]);
+				chart.addMetricToChart(atomMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length], atomMetricLabels[dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length]);
 			}
 		}
 	});

@@ -5,7 +5,11 @@ var p,
 function Metric() {
 	this.type = null;
 	this.metric = null;
+	this.metricLabel = null;
 	this.method = null;
+	this.methodLabel = null;
+	
+	this.fill = null;
 	
 	this.data = new Array();
 }
@@ -18,9 +22,9 @@ function Chart(id, width, height) {
 	this.allChartWidth = width;
 	this.chartHeight = height;
 
-	this.yLabelWidth = 40;
-	this.legendWidth = 50;
-	this.chartWidth = this.allChartWidth - this.yLabelWidth - this.legendWidth;
+	this.leftSpaceWidth = 40;
+	this.rightSpaceWidth = 20;
+	this.chartWidth = this.allChartWidth - this.leftSpaceWidth - this.rightSpaceWidth;
 	
 	this.h1 = ((this.chartHeight * 80) / 100);
 	this.h2 = ((this.chartHeight * 10) / 100);
@@ -49,14 +53,17 @@ function Chart(id, width, height) {
 	this.context;
 	
 	this.active;
+	
+	this.legend;
 }
 
 Chart.prototype.init = function(color) {
 	var chart = this;
-
+	
 	d3.select("#" + chart.id).on("mousemove", function() {
 		if (chart.xx != null) {
-
+			var multipleMetrics = (chart.chartMetrics.length > 1);
+			
 			// Compute the new (clamped) focus region.
 			var xy = chart.x.invert(d3.svg.mouse(chart.active[0][0])[0]);
 			if (chart.xx < xy) {
@@ -80,18 +87,31 @@ Chart.prototype.init = function(color) {
 				var newData = computeFocusData(chart, metrics[i]);
 				
 				// Recompute the focus path.
-				chart.focusArea.select("#" + validID(metrics[i].metric))
+				if (multipleMetrics) {
+					chart.focusArea.select("#" + validID(metrics[i].metric))
 					.data([newData])
 					.attr("d", 
-						d3.svg.area().x(function(d) {
+						d3.svg.line().x(function(d) {
 							return tx(d.x);
 						})
-						//.y0(y1(0))
-						.y0(chart.y1(chart.minY))
-						.y1(function(d) {
+						.y(function(d) {
 							return chart.y1(d.y);
 						})
-					);
+					);					
+				} else {
+					chart.focusArea.select("#" + validID(metrics[i].metric))
+						.data([newData])
+						.attr("d", 
+							d3.svg.area().x(function(d) {
+								return tx(d.x);
+							})
+							//.y0(y1(0))
+							.y0(chart.y1(chart.minY))
+							.y1(function(d) {
+								return chart.y1(d.y);
+							})
+						);
+				}
 			}
 			
 			// Reposition the active region rect.
@@ -131,10 +151,12 @@ Chart.prototype.init = function(color) {
 		.text("DROP HERE!");
 
 	this.focusArea = this.chartSvgArea.append("svg:g")
-		.attr("transform", "translate(" + this.yLabelWidth + ",0)");
+		.attr("transform", "translate(" + this.leftSpaceWidth + ",0)");
 	
 	this.context = this.chartSvgArea.append("svg:g")
-		.attr("transform", "translate(" + this.yLabelWidth + "," + this.h1 + ")");
+		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.h1 + ")");
+	
+	this.legend = new Legend(this);
 };
 
 function computeFocusData(chart, metric) {
@@ -184,13 +206,16 @@ Chart.prototype.createMetricJsonParameter = function(metric) {
 	return result + "}";
 };
 
-Chart.prototype.addMetricToChart = function(aMetric, aMethod) {
+Chart.prototype.addMetricToChart = function(aMetric, aMetricLabel, aMethod, aMethodLabel) {
 	var metric = new Metric();
 	metric.metric = aMetric;
+	metric.metricLabel = aMetricLabel;
 	metric.method = aMethod;
+	metric.methodLabel = aMethodLabel;
+	metric.fill = this.fill(aMetric);
 	var exists = false;
 	for (var i = 0; i < this.chartMetrics.length; i++) {
-		if (this.chartMetrics[i] == metric) {
+		if (this.chartMetrics[i].metric == metric.metric) {
 			exists = true;
 			break;
 		}
@@ -200,6 +225,23 @@ Chart.prototype.addMetricToChart = function(aMetric, aMethod) {
 	} 
 	this.chartMetrics.push(metric);
 	this.displayChart();
+	this.legend.refreshLegend();
+};
+
+Chart.prototype.removeMetric = function(metric) {
+	var index = -1;
+	for (var i = 0; i < this.chartMetrics.length; i++) {
+		if (this.chartMetrics[i].metric == metric.metric) {
+			index = i;
+			break;
+		}
+	}
+	if (index == -1) {
+		return;
+	}
+	this.chartMetrics.splice(index, 1);
+	this.displayChart();
+	this.legend.refreshLegend();
 };
 
 Chart.prototype.displayChart = function() {
@@ -209,9 +251,10 @@ Chart.prototype.displayChart = function() {
 			var metricData = null;
 			getMetricData(this.createMetricJsonParameter(metrics[i]), function(data) {metricData = data;});
 			metrics[i].data = this.processData(metricData);
-			this.computeScales();
+			//this.computeScales();
 		};
 	};
+	this.computeScales();
 	this.drawChart();
 	for (var i = 0; i < metrics.length; i++) {
 		this.drawMetric(metrics[i]);
@@ -299,74 +342,58 @@ Chart.prototype.computeScales = function() {
 		}
 	}	
 };
-function getFill(metric) {
-	if (metric == IO_READ) {
-		return 1;
-	} else if (metric == IO_WRITE) {
-		return 2;
-	} else if (metric == IDLE_CPU_LOAD) {
-		return 3;
-	} else if (metric == IDLE_CPU_TIME) {
-		return 4;
-	} else if (metric == IRQ_CPU_LOAD) {
-		return 5;
-	} else if (metric == IRQ_CPU_TIME) {
-		return 6;
-	} else if (metric == SWAP_IN) {
-		return 7;
-	} else if (metric == SWAP_OUT) {
-		return 8;
-	} else if (metric == SYSTEM_CPU_LOAD) {
-		return 9;
-	} else if (metric == SYSTEM_CPU_TIME) {
-		return 10;
-	} else if (metric == SYSTEM_LOAD_AVERAGE) {
-		return 11;
-	} else if (metric == SYSTEM_OPEN_FILE_DESCRIPTOR_COUNT) {
-		return 12;
-	} else if (metric == TOTAL_SYSTEM_FREE_MEMORY) {
-		return 13;
-	} else if (metric == TOTAL_SYSTEM_USED_MEMORY) {
-		return 14;
-	} else if (metric == TOTAL_SYSTEM_USED_SWAP) {
-		return 15;
-	} else if (metric == USER_CPU_LOAD) {
-		return 16;
-	} else if (metric == USER_CPU_TIME) {
-		return 17;
-	} else if (metric == WAIT_CPU_LOAD) {
-		return 18;
-	} else if (metric == WAIT_CPU_TIME) {
-		return 19;
-	}
-}
 
 Chart.prototype.drawMetric = function(metric) {
 	var chart = this;
-	
-	this.focusArea.append("svg:path").data([ metric.data ])
-		.attr("class", "chart")
-		.attr("id", validID(metric.metric))
-		.style("fill", chart.fill(getFill(metric.metric)))
-		.attr("d", d3.svg.area().x(function(d) {return chart.x(d.x);})
-			// .y0(y1(0))
-			.y0(this.y1(this.minY))
-			.y1(function(d) {
-				return chart.y1(d.y);
-			}));
+	var multipleMetrics = (chart.chartMetrics.length > 1);
 
-	this.context.append("svg:path")
+	var focusPath = this.focusArea.append("svg:path").data([ metric.data ])
+		.attr("id", validID(metric.metric));
+	
+	if (multipleMetrics) {
+		focusPath.attr("d", d3.svg.line().x(function(d) {return chart.x(d.x);})
+				.y(function(d) {
+					return chart.y1(d.y);
+				}));
+		focusPath.style("stroke", chart.fill(metric.fill));
+		focusPath.style("stroke-width", "2px");
+		focusPath.style("fill", "none");
+	} else {
+		focusPath.attr("d", d3.svg.area().x(function(d) {return chart.x(d.x);})
+				// .y0(y1(0))
+				.y0(this.y1(this.minY))
+				.y1(function(d) {
+					return chart.y1(d.y);
+				}));
+		focusPath.style("fill", chart.fill(metric.fill));
+		focusPath.style("stroke", "none");
+	}
+	
+	var contextPath = this.context.append("svg:path")
 		.data([metric.data])
-		.attr("class", "chart")
-		.attr("pointer-events", "none")
-		.style("fill", chart.fill(getFill(metric.metric)))
-		.attr("d", d3.svg.area().x(function(d) {
+		.attr("pointer-events", "none");
+
+	if (multipleMetrics) {
+		contextPath.attr("d", d3.svg.line().x(function(d) {
+			return chart.x(d.x);
+		})
+		.y(function(d) {
+			return chart.y2(d.y);
+		}));
+		contextPath.style("stroke", chart.fill(metric.fill));
+		contextPath.style("stroke-width", "1px");
+		contextPath.style("fill", "none");
+	} else {
+		contextPath.attr("d", d3.svg.area().x(function(d) {
 			return chart.x(d.x);
 		})
 		//.y0(y2(0))
 		.y0(this.y2(this.minY)).y1(function(d) {
 			return chart.y2(d.y);
 		}));
+		contextPath.style("fill", chart.fill(metric.fill));
+		contextPath.style("stroke", "none");
+	}
 
 };
 
@@ -378,13 +405,13 @@ Chart.prototype.drawChart = function() {
 	this.y1.domain([ this.minY, this.maxY ]);
 	this.y2.domain([ this.minY, this.maxY ]);
 
-	this.chartSvgArea.select("rect").remove();
-	this.chartSvgArea.select("text").remove();
+	this.chartSvgArea.selectAll("rect").remove();
+	this.chartSvgArea.selectAll("text").remove();
 	
 	// Focus view.
-	this.focusArea.select("path").remove();
+	this.focusArea.selectAll("path").remove();
 
-	this.focusArea.select("line").remove();
+	this.focusArea.selectAll("line").remove();
 	this.focusArea.append("svg:line")
 		.attr("class", "chart")
 		.attr("x1", 0)
@@ -431,7 +458,7 @@ Chart.prototype.drawChart = function() {
 		.text(this.getYLabel(this.maxY));	
 
 	// Context view.
-	this.context.select("rect").remove();
+	this.context.selectAll("rect").remove();
 	this.context.append("svg:rect")
 		.attr("width", this.chartWidth)
 		.attr("height", this.h2)
@@ -442,16 +469,16 @@ Chart.prototype.drawChart = function() {
 			chart.xx = chart.x.invert(d3.svg.mouse(this)[0]);
 		});
 
-	this.context.select("path").remove();
+	this.context.selectAll("path").remove();
 
-	this.context.select("line").remove();
+	this.context.selectAll("line").remove();
 	this.context.append("svg:line")
 		.attr("class", "chart")
 		.attr("x1", 0)
 		.attr("x2", this.chartWidth)
 		.attr("y1", this.y2(this.minY))
 		.attr("y2",	this.y2(this.minY));
-	this.context.select("text").remove();
+	this.context.selectAll("text").remove();
 	this.context.append("svg:text")
 		.attr("font-family", "Verdana")
 		.attr("font-size", "8")
@@ -476,5 +503,5 @@ Chart.prototype.drawChart = function() {
 			.attr("height", this.h2)
 			//.attr("width", this.x(this.x1 = (this.minX + 1e11)) - this.x(this.x0))
 			.attr("width", this.x(this.x1 = this.maxX) - this.x(this.x0))
-			.attr("fill", "lightcoral").attr("fill-opacity", .5);
+			.attr("fill", "lightcoral").attr("fill-opacity", .2);
 };
