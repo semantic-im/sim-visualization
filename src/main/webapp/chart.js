@@ -141,12 +141,17 @@ function Chart(id, width, height) {
 	this.active;
 	
 	this.legend;
+	
+	this.mouseMoveHandlers = new Array();
 }
 
 Chart.prototype.init = function(color) {
 	var chart = this;
 	
 	d3.select("#" + chart.id).on("mousemove", function() {
+		for (var i = 0; i < chart.mouseMoveHandlers.length; i++) {
+			chart.mouseMoveHandlers[i].call();
+		}
 		if (chart.xx != null) {
 			var multipleMetrics = (chart.chartMetrics.length > 1);
 			

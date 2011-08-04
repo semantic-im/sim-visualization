@@ -2,6 +2,7 @@
 function Legend(chart) {
 	
 	this.chart = chart;
+	this.chart.mouseMoveHandlers.push(movers);
 	
 	var legendContent = null;
 	
@@ -11,8 +12,7 @@ function Legend(chart) {
 	this.refreshLegend = function () {
 		var legendContainer = d3.select("#" + chart.id + "LegendContainer");
 		if (legendContainer.empty()) {
-			var chartSelection = d3.select("#" + this.chart.id)
-				.on('mousemove', movers);
+			var chartSelection = d3.select("#" + this.chart.id);
 			var legendTitleLeft = (chart.allChartWidth - 100);
 			legendContainer = chartSelection.append("div")
 				.attr("id", this.chart.id + "LegendContainer")
@@ -31,7 +31,7 @@ function Legend(chart) {
 				.style("height", 20 + "px")
 				.style("width", 76 + "px")
 				.style("text-align", "center")
-				.on("mouseover", legendMouseover)
+				.on("mouseover", function() {d3.select("#" + chart.id + "LegendTitle").style('cursor', 'move');  legendMouseover();})
 				.on("mouseout", legendMouseout)
 				.on("mousedown", moveService);
 			legendTitle.classed("legend-title", true);
