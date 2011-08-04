@@ -32,19 +32,6 @@ function drawCloseIcon() {
 	context.fill();		
 }
 
-function drawTriangle(canvas) {
-	var context = canvas.getContext('2d');
-	//context.fillStyle  = "rgba(255, 0, 0, 1)";
-	context.fillStyle  = "#666666";
-	context.beginPath();
-	context.moveTo(4, 4);
-	context.lineTo(12, 4);
-	context.lineTo(8, 12);
-	context.lineTo(4, 4);
-	context.closePath();
-	context.fill();		
-}
-
 $(document).ready(function() {
 	var metricsSelectorHeight = (clientHeight - clientHeight * 0.1);
 	var metricsSelectorPaddingHeight = 10;
@@ -140,8 +127,8 @@ $(document).ready(function() {
 	var gridDiv = displaySettings.append("div")
 		.style("display", "inline-block")
 		.style("vertical-align", "top")
-		.style("text-align", "center")
-		.style("width", "100px");
+		.style("text-align", "center");
+		//.style("width", "200px");
 	
 	gridDiv.append("input")
 		.attr("id", "r1x1")
@@ -153,7 +140,6 @@ $(document).ready(function() {
 	gridDiv.append("span")
 		.attr("class", "metrics-title-label")
 		.text("1x1");		
-	gridDiv.append("br");
 	gridDiv.append("input")
 		.attr("id", "r2x1")
 		.attr("type", "radio")
@@ -163,6 +149,15 @@ $(document).ready(function() {
 	gridDiv.append("span")
 		.attr("class", "metrics-title-label")
 		.text("2x1");		
+	gridDiv.append("input")
+		.attr("id", "r4x1")
+		.attr("type", "radio")
+		.attr("name", "grid")
+		.attr("value", "r4x1")
+		.on("click", gridChanged);
+	gridDiv.append("span")
+		.attr("class", "metrics-title-label")
+		.text("4x1");
 	gridDiv.append("br");
 	gridDiv.append("input")
 		.attr("id", "r2x2")
@@ -173,6 +168,15 @@ $(document).ready(function() {
 	gridDiv.append("span")
 		.attr("class", "metrics-title-label")
 		.text("2x2");		
+	gridDiv.append("input")
+		.attr("id", "r4x2")
+		.attr("type", "radio")
+		.attr("name", "grid")
+		.attr("value", "r4x2")
+		.on("click", gridChanged);
+	gridDiv.append("span")
+		.attr("class", "metrics-title-label")
+		.text("4x2");
 	//~
 
 	//SYSTEM METRICS
@@ -426,37 +430,76 @@ function gridChanged() {
 	} else if (grid == "r2x1") {
 		d3.select("#chart1").remove();
 		d3.select("#chart2").remove();
+	} else if (grid == "r4x1") {
+		d3.select("#chart1").remove();
+		d3.select("#chart2").remove();
+		d3.select("#chart3").remove();
+		d3.select("#chart4").remove();
 	} else if (grid == "r2x2") {
 		d3.select("#chart1").remove();
 		d3.select("#chart2").remove();
 		d3.select("#chart3").remove();
 		d3.select("#chart4").remove();
+	} else if (grid == "r4x2") {
+		d3.select("#chart1").remove();
+		d3.select("#chart2").remove();
+		d3.select("#chart3").remove();
+		d3.select("#chart4").remove();		
+		d3.select("#chart5").remove();
+		d3.select("#chart6").remove();
+		d3.select("#chart7").remove();
+		d3.select("#chart8").remove();
 	}
 	grid = d3.event.target.id;
 	if (grid == "r1x1") {
 		displayChart1x1();
 	} else if (grid == "r2x1") {
 		displayChart2x1();
+	} else if (grid == "r4x1") {
+		displayChart4x1();
 	} else if (grid == "r2x2") {
 		displayChart2x2();
+	} else if (grid == "r4x2") {
+		displayChart4x2();
 	}
+}
+
+function createMetric(chart, dataIndex) {
+	var index = -1;
+	var metric = null;
+	if (dataIndex < systemMetrics.length) {
+		index = dataIndex;
+		metric = chart.createMetric(systemMetrics[index], systemMetricLabels[index]);
+	} else if (dataIndex < systemMetrics.length + methods.length ) {
+		index = dataIndex - systemMetrics.length;
+		metric = chart.createMetric(selectedMethodMetric, selectedMethodMetricLabel, methods[index], methods[index].substring(methods[index].lastIndexOf("#") + 1, methods[index].length));
+	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length) {
+		index = dataIndex - systemMetrics.length - methods.length;
+		metric = chart.createMetric(platformMetrics[index], platformMetricLabels[index]);
+	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length) {
+		index = dataIndex - systemMetrics.length - methods.length - platformMetrics.length;
+		metric = chart.createMetric(compoundMetrics[index], compoundMetricLabels[index]);
+	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length + atomicMetrics.length) {
+		index = dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length;
+		metric = chart.createMetric(atomicMetrics[index], atomicMetricLabels[index]);
+	}
+	return metric;
 }
 
 function setDroppable(chart) {
 	$( "#" + chart.id ).droppable({
+		accept: function (draggable) {
+			var dataIndex = draggable.attr("data");
+			if (!dataIndex) {
+				return;
+			}
+			var metric = createMetric(chart, dataIndex);
+			return chart.acceptMetric(metric);
+		},
 		drop: function( event, ui ) {
 			var dataIndex = ui.draggable.attr("data");
-			if (dataIndex < systemMetrics.length) {
-				chart.addMetricToChart(systemMetrics[dataIndex], systemMetricLabels[dataIndex]);
-			} else if (dataIndex < systemMetrics.length + methods.length ) {
-				chart.addMetricToChart(selectedMethodMetric, selectedMethodMetricLabel, methods[dataIndex - systemMetrics.length], methods[dataIndex - systemMetrics.length].substring(methods[dataIndex - systemMetrics.length].lastIndexOf("#") + 1, methods[dataIndex - systemMetrics.length].length));
-			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length) {
-				chart.addMetricToChart(platformMetrics[dataIndex - systemMetrics.length - methods.length], platformMetricLabels[dataIndex - systemMetrics.length - methods.length]);
-			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length) {
-				chart.addMetricToChart(compoundMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length], compoundMetricLabels[dataIndex - systemMetrics.length - methods.length - platformMetrics.length]);
-			} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length + atomMetrics.length) {
-				chart.addMetricToChart(atomMetrics[dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length], atomMetricLabels[dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length]);
-			}
+			var metric = createMetric(chart, dataIndex);
+			chart.addMetricToChart(metric);
 		}
 	});
 }
@@ -493,6 +536,33 @@ function displayChart2x1() {
 	chart2 = new Chart("chart2", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	setDroppable(chart2);
 	chart2.init(chartColors(2));
+}
+
+function displayChart4x1() {
+	displayChart2x1();
+
+	d3.select("#charts-dashboard").append("div").attr("id", "chart3")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", (chartsDashboardWidth - 2) + "px")
+		.style("top", (chartsDashboardHeight - 2) + "px")
+		.style("left", 0 + "px");
+		//.style("display", "inline-block");
+	
+	chart3 = new Chart("chart3", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
+	setDroppable(chart3);
+	chart3.init(chartColors(3));
+	
+	d3.select("#charts-dashboard").append("div").attr("id", "chart4")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", (chartsDashboardWidth - 2) + "px")
+		.style("top", (((chartsDashboardHeight - 2) / 2) * 3) + "px")
+		.style("left", 0 + "px");
+	
+	chart4 = new Chart("chart4", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
+	setDroppable(chart4);
+	chart4.init(chartColors(4));
 }
 
 function displayChart2x2() {
@@ -533,7 +603,50 @@ function displayChart2x2() {
 	chart4 = new Chart("chart4", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
 	setDroppable(chart4);
 	chart4.init(chartColors(4));
+}
 
+function displayChart4x2() {
+	displayChart2x2();
+	
+	d3.select("#charts-dashboard").append("div").attr("id", "chart5")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px")
+		.style("top", (chartsDashboardHeight - 2) + "px")
+		.style("left", 0 + "px");
+	chart5 = new Chart("chart5", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
+	setDroppable(chart5);
+	chart5.init(chartColors(5));
+	
+	d3.select("#charts-dashboard").append("div").attr("id", "chart6")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px")
+		.style("top", (chartsDashboardHeight - 2) + "px")
+		.style("left", ((chartsDashboardWidth - 2) / 2) + "px");
+	chart6 = new Chart("chart6", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
+	setDroppable(chart6);
+	chart6.init(chartColors(6));
+	
+	d3.select("#charts-dashboard").append("div").attr("id", "chart7")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px")
+		.style("top", (((chartsDashboardHeight - 2) / 2) * 3) + "px")
+		.style("left", 0 + "px");
+	chart7 = new Chart("chart7", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
+	setDroppable(chart7);
+	chart7.init(chartColors(7));
+	
+	d3.select("#charts-dashboard").append("div").attr("id", "chart8")
+		.attr("class", "chart")
+		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
+		.style("width", ((chartsDashboardWidth - 4) / 2) + "px")
+		.style("top", (((chartsDashboardHeight - 2) / 2) * 3) + "px")
+		.style("left", ((chartsDashboardWidth - 2) / 2) + "px");
+	chart8 = new Chart("chart8", ((chartsDashboardWidth - 4) / 2), (chartsDashboardHeight - 4) / 2);
+	setDroppable(chart8);
+	chart8.init(chartColors(8));
 }
 
 function metricsSelectorToggleMouseover() {

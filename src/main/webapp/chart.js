@@ -2,8 +2,18 @@ var p,
 	time = d3.time.format("%Y-%m-%dT%H:%M:%S"),
 	shortTime = d3.time.format("%d.%m.%y %H:%M:%S");
 
+//type
+Metric.VALUES_TYPE = "VALUES_TYPE";
+Metric.INCREMENT_TYPE = "VALUES_TYPE";
+
+//measurement units
+Metric.KILOBYTES = "KILOBYTES";
+Metric.PERCENTAGE = "PERCENTAGE";
+Metric.TIMESTAMP = "TIMESTAMP";
+Metric.NUMERIC = "NUMERIC";
+
 function Metric() {
-	this.type = null;
+
 	this.metric = null;
 	this.metricLabel = null;
 	this.method = null;
@@ -12,7 +22,79 @@ function Metric() {
 	this.fill = null;
 	
 	this.data = new Array();
+	
+	this.type = function() {
+		switch (this.metric) {
+		case IO_READ:
+		case IO_WRITE:
+			return Metric.INCREMENT_TYPE;
+		default:
+			return Metric.VALUES_TYPE;
+		}
+	};
+	
+	this.getFormattedValue = function(value) {
+		switch (this.measurementUnit()) {
+		case Metric.KILOBYTES:
+			return value + "K";
+		case Metric.PERCENTAGE:
+			return d3.format(".2%")(value);
+		case Metric.TIMESTAMP:
+			return d3.format(".2f")(value) + "ms";
+		default:
+			return value;
+		}
+	};
+	
+	this.measurementUnit = function () {
+		switch (this.metric) {
+		case IO_READ:
+		case IO_WRITE:
+		case SWAP_IN:
+		case SWAP_OUT:
+		case TOTAL_SYSTEM_FREE_MEMORY:
+		case TOTAL_SYSTEM_USED_MEMORY:
+		case TOTAL_SYSTEM_USED_SWAP:
+		//platform metrics
+		case PLATFORM_MEMORY_USAGE:
+			return Metric.KILOBYTES;
+		case IDLE_CPU_LOAD:
+		case IRQ_CPU_LOAD:
+		case SYSTEM_CPU_LOAD:
+		case SYSTEM_LOAD_AVERAGE:
+		case USER_CPU_LOAD:
+		case WAIT_CPU_LOAD:
+		//platform metrics
+		case PLATFORM_AVG_CPU_USAGE:
+		case PLATFORM_CPU_USAGE:
+			return Metric.PERCENTAGE;
+		//system metrics
+		case IDLE_CPU_TIME:
+		case IRQ_CPU_TIME:
+		case SYSTEM_CPU_TIME:
+		case USER_CPU_TIME:
+		case WAIT_CPU_TIME:
+		//method metrics
+		case PROCESS_TOTAL_CPU_TIME:
+		case THREAD_BLOCK_TIME:
+		case THREAD_GCC_TIME:
+		case THREAD_SYSTEM_CPU_TIME:
+		case THREAD_TOTAL_CPU_TIME:
+		case THREAD_USER_CPU_TIME:
+		case THREAD_WAIT_TIME:
+		case WALL_CLOCK_TIME:
+		//platform metrics
+		case PLATFORM_CPU_TIME:
+		case PLATFORM_GCC_TIME:
+		case PLATFORM_UPTIME:
+			return Metric.TIMESTAMP;
+		default:
+			return Metric.NUMERIC;
+		}
+	};
+	
 }
+
 function Chart(id, width, height) {
 	this.id = id;
 	
@@ -20,15 +102,19 @@ function Chart(id, width, height) {
 	
 	//this.chartHeight = ((clientHeight * 90) / 100);
 	this.allChartWidth = width;
-	this.chartHeight = height;
+	this.allChartHeight = height;
 
 	this.leftSpaceWidth = 40;
 	this.rightSpaceWidth = 20;
+	this.topSpaceHeight = 10;
+	this.bottomSpaceHeight = 10;
 	this.chartWidth = this.allChartWidth - this.leftSpaceWidth - this.rightSpaceWidth;
+	this.chartHeight = this.allChartHeight - this.topSpaceHeight - this.bottomSpaceHeight;
 	
-	this.h1 = ((this.chartHeight * 80) / 100);
-	this.h2 = ((this.chartHeight * 10) / 100);
-	p = this.chartHeight - (this.h1 + this.h2 + 1);
+	this.h1 = ((this.chartHeight * 85) / 100);
+	this.h2 = ((this.chartHeight * 15) / 100) - this.bottomSpaceHeight;
+	//p = this.chartHeight - (this.h1 + this.h2 + 1);
+	p = 20;
 	this.chartMetrics = new Array();
 	
 	this.x = d3.scale.linear().range([0, this.chartWidth]),
@@ -127,7 +213,7 @@ Chart.prototype.init = function(color) {
 	this.chartSvgArea = d3.select("#" + this.id)
 		.append("svg:svg")
 		.attr("width", (this.allChartWidth - 4) + "px")
-		.attr("height", (this.chartHeight - 4) + "px")
+		.attr("height", (this.allChartHeight - 4) + "px")
 		.style("position", "relative")
 		.style("top", 2 + "px")
 		.style("left", 2 + "px");
@@ -136,7 +222,7 @@ Chart.prototype.init = function(color) {
 			.attr("pointer-events", "none")
 			.attr("x", 0 + "px")
 			.attr("y", 0 + "px")
-			.attr("height", (this.chartHeight  - 4)  + "px")
+			.attr("height", (this.allChartHeight  - 4)  + "px")
 			.attr("width", (this.allChartWidth - 4) + "px")
 			.attr("fill", color).attr("fill-opacity", .2);
 	this.chartSvgArea.append("svg:text")
@@ -151,10 +237,10 @@ Chart.prototype.init = function(color) {
 		.text("DROP HERE!");
 
 	this.focusArea = this.chartSvgArea.append("svg:g")
-		.attr("transform", "translate(" + this.leftSpaceWidth + ",0)");
+		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
 	
 	this.context = this.chartSvgArea.append("svg:g")
-		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.h1 + ")");
+		.attr("transform", "translate(" + this.leftSpaceWidth + "," + (this.topSpaceHeight + this.h1) + ")");
 	
 	this.legend = new Legend(this);
 };
@@ -206,13 +292,24 @@ Chart.prototype.createMetricJsonParameter = function(metric) {
 	return result + "}";
 };
 
-Chart.prototype.addMetricToChart = function(aMetric, aMetricLabel, aMethod, aMethodLabel) {
+Chart.prototype.createMetric = function (aMetric, aMetricLabel, aMethod, aMethodLabel) {
 	var metric = new Metric();
 	metric.metric = aMetric;
 	metric.metricLabel = aMetricLabel;
 	metric.method = aMethod;
 	metric.methodLabel = aMethodLabel;
-	metric.fill = this.fill(aMetric);
+	return metric;
+};
+
+Chart.prototype.acceptMetric = function (metric) {
+	if (this.chartMetrics.length == 0) {
+		return  true;
+	}
+	return metric.measurementUnit() == this.chartMetrics[0].measurementUnit(); 
+};
+
+Chart.prototype.addMetricToChart = function(metric) {
+	metric.fill = this.fill(metric.metric);
 	var exists = false;
 	for (var i = 0; i < this.chartMetrics.length; i++) {
 		if (this.chartMetrics[i].metric == metric.metric) {
@@ -250,7 +347,7 @@ Chart.prototype.displayChart = function() {
 		if (metrics[i].data.length == 0) {
 			var metricData = null;
 			getMetricData(this.createMetricJsonParameter(metrics[i]), function(data) {metricData = data;});
-			metrics[i].data = this.processData(metricData);
+			metrics[i].data = this.processData(metrics[i], metricData);
 			//this.computeScales();
 		};
 	};
@@ -263,54 +360,32 @@ Chart.prototype.displayChart = function() {
 
 Chart.prototype.getYLabel = function(value) {
 	var metrics = this.chartMetrics;
-	for (var i = 0; i < metrics.length; i++) {
-		if ((metrics[i].metric == IO_READ) ||
-				(metrics[i].metric == IO_WRITE) ||
-				(metrics[i].metric == SWAP_IN) ||
-				(metrics[i].metric == SWAP_OUT) ||
-				(metrics[i].metric == TOTAL_SYSTEM_FREE_MEMORY) ||
-				(metrics[i].metric == TOTAL_SYSTEM_USED_MEMORY) ||
-				(metrics[i].metric == TOTAL_SYSTEM_USED_SWAP)) {
-			return Math.round(value / 1024) + "K";
-		} else if ((metrics[i].metric == IDLE_CPU_LOAD) ||
-				(metrics[i].metric == IRQ_CPU_LOAD) ||
-				(metrics[i].metric == SYSTEM_CPU_LOAD) ||
-				(metrics[i].metric == SYSTEM_LOAD_AVERAGE) ||
-				(metrics[i].metric == USER_CPU_LOAD) ||
-				(metrics[i].metric == WAIT_CPU_LOAD)) {
-			return d3.format(".2%")(value);
-		} else if ((metrics[i].metric == IDLE_CPU_TIME) ||
-				(metrics[i].metric == IRQ_CPU_TIME) ||
-				(metrics[i].metric == SYSTEM_CPU_TIME) ||
-				(metrics[i].metric == USER_CPU_TIME) ||
-				(metrics[i].metric == WAIT_CPU_TIME) ||
-				(metrics[i].metric == PROCESS_TOTAL_CPU_TIME) ||
-				(metrics[i].metric == THREAD_BLOCK_TIME) ||
-				(metrics[i].metric == THREAD_GCC_TIME) ||
-				(metrics[i].metric == THREAD_SYSTEM_CPU_TIME) ||
-				(metrics[i].metric == THREAD_TOTAL_CPU_TIME) ||
-				(metrics[i].metric == THREAD_USER_CPU_TIME) ||
-				(metrics[i].metric == THREAD_WAIT_TIME) ||
-				(metrics[i].metric == WALL_CLOCK_TIME)) {
-			return d3.format(".4")(value) + "ms";
-		} else if ((metrics[i].metric == SYSTEM_OPEN_FILE_DESCRIPTOR_COUNT) ||
-				(metrics[i].metric == THREAD_BLOCK_COUNT) ||
-				(metrics[i].metric == THREAD_COUNT) ||
-				(metrics[i].metric == THREAD_GCC_COUNT) ||
-				(metrics[i].metric == THREAD_WAIT_COUNT)) {
-			return value;
-		}
+	if (metrics.length == 0) {
+		return "";
 	}
-
+	var aMetric = metrics[0];
+	return aMetric.getFormattedValue(value);
 };
 
-Chart.prototype.processData = function(data) {
+Chart.prototype.processData = function(metric, data) {
 	var newData = new Array();
+	var metricType = metric.type();
+	var lastValue = 0;
 	for ( var i = 0, n = data.length, o; i < n; i++) {
 		o = data[i];
+		var value = 0;
+		if (metricType == Metric.INCREMENT_TYPE) {
+			if (i != 0) {
+				//console.debug((+o.value) + " " + lastValue);
+				value = (+o.value) - lastValue;
+			}
+			lastValue = (+o.value);
+		} else {
+			value = +o.value;
+		}
 		o = data[i] = {
 			x : +time.parse(o.timestamp),
-			y : +o.value
+			y : value
 		};
 		newData.push(o);
 	}	

@@ -61,6 +61,7 @@ body {
 	position: absolute;
 	border: 1px solid black;
 	display: inline-block;
+	overflow: hidden;
 }
 	
 .metric-container {
@@ -121,7 +122,11 @@ line.chart {
 	margin-bottom: 5px;
 }
 	
-.legend {
+.legend-container {
+	position: absolute;
+}
+	
+.legend-title {
 	position: absolute;
 	font-family: Verdana;
 	font-size: 14px;
@@ -132,7 +137,8 @@ line.chart {
 	border-top-left-radius: 5px;
 	padding: 2px;
 	color: OrangeRed;
-	cursor: pointer;
+	border: 1px solid OrangeRed;
+	cursor: move;
 	text-align: center;
 }
 
@@ -141,10 +147,16 @@ line.chart {
     opacity: 0.5;
 }
 
+.legend-transparent-drag {
+    filter: alpha(opacity=20);
+    opacity: 0.2;
+}
+
 .legend-content {
 	position: absolute;
 	border: 1px solid OrangeRed;
 	background: WhiteSmoke;
+	overflow-y: auto;
 }
 
 .legend-delete {

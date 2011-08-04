@@ -342,3 +342,32 @@ function drawCircle(canvas, radius, color) {
 	context.closePath();
 	context.fill();		
 }
+
+function drawTriangleUp(canvas) {
+	var context = canvas.getContext('2d');
+	context.clearRect ( 0 , 0 , 16 , 16 );
+	//context.fillStyle  = "rgba(255, 0, 0, 1)";
+	context.fillStyle  = "#666666";
+	context.beginPath();
+	context.moveTo(12, 12);
+	context.lineTo(4, 12);
+	context.lineTo(8, 4);
+	context.lineTo(12, 12);
+	context.closePath();
+	context.fill();		
+}
+
+function drawTriangle(canvas) {
+	
+	var context = canvas.getContext('2d');
+	context.clearRect ( 0 , 0 , 16 , 16 );
+	//context.fillStyle  = "rgba(255, 0, 0, 1)";
+	context.fillStyle  = "#666666";
+	context.beginPath();
+	context.moveTo(4, 4);
+	context.lineTo(12, 4);
+	context.lineTo(8, 12);
+	context.lineTo(4, 4);
+	context.closePath();
+	context.fill();		
+}

@@ -3,37 +3,59 @@ function Legend(chart) {
 	
 	this.chart = chart;
 	
+	var legendContent = null;
+	
 	var mouseover = false;
 	var contentShow = true;
-	var legendContent;
 	
 	this.refreshLegend = function () {
-		var legendDiv = d3.select("#" + chart.id + " .legend");
-		if (legendDiv.empty()) {
-			var chartSelection = d3.select("#" + this.chart.id);
-			var legendTitleLeft = (chart.allChartWidth - 80);
-			legendDiv = chartSelection.append("div")
+		var legendContainer = d3.select("#" + chart.id + "LegendContainer");
+		if (legendContainer.empty()) {
+			var chartSelection = d3.select("#" + this.chart.id)
+				.on('mousemove', movers);
+			var legendTitleLeft = (chart.allChartWidth - 100);
+			legendContainer = chartSelection.append("div")
+				.attr("id", this.chart.id + "LegendContainer")
 				.style("top", 10 + "px")
-				.style("left", legendTitleLeft + "px")
+				.style("left", (legendTitleLeft - 220) + "px")
+				.style("height", 100 + "px")
+				.style("width", (220) + "px") //padding
+				.on("mouseup", unmoveService);
+			legendContainer.classed("legend-container", true);
+			//$( "#" + chart.id + "LegendContainer" ).draggable();
+			
+			var legendTitle = legendContainer.append("div")
+				.attr("id", this.chart.id + "LegendTitle")
+				.style("top", 0 + "px")
+				.style("left", 140 + "px")
 				.style("height", 20 + "px")
-				.style("width", 60 + "px")
+				.style("width", 76 + "px")
 				.style("text-align", "center")
 				.on("mouseover", legendMouseover)
 				.on("mouseout", legendMouseout)
+				.on("mousedown", moveService);
+			legendTitle.classed("legend-title", true);
+			legendTitle.classed("legend-transparent", true);
+			legendTitle.append("span").text("Legend");
+			
+			legendTitle.append("canvas")
+				.attr("id", chart.id + "ToggleIcon")
+				.attr("width", "16")
+				.attr("height", "16")
+				.style("cursor", "pointer")
+				.attr("class", "metric-icon")
 				.on("click", toggleContent);
-			legendDiv.classed("legend", true);
-			legendDiv.classed("legend-transparent", true);
-			legendDiv.append("span").text("Legend");
+			drawTriangle($('#' + chart.id + 'ToggleIcon')[0]);
 			
 			//the content
-			legendContent = chartSelection.append("div")
+			this.legendContent = legendContainer.append("div")
+				.attr("id", this.chart.id + "LegendContent")
 				.classed("legend-content", true)
 				.classed("legend-transparent", true)
-				.style("display", "inline-block")
-				.style("top", (10 + 20 + 2*2) + "px") //2*2 padding
-				.style("left", (legendTitleLeft - 140) + "px")
+				.style("top", (20 + 2*2 + 1) + "px") //2*2 padding
+				.style("left", 0 + "px")
 				.style("height", 80 + "px")
-				.style("width", (200 + 2*2) + "px") //padding
+				.style("width", (220) + "px") //padding
 				.on("mouseover", legendMouseover)
 				.on("mouseout", legendMouseout);
 		}
@@ -70,9 +92,63 @@ function Legend(chart) {
 		console.debug(chart.chartMetrics[dataIndex].metric);chart.removeMetric(chart.chartMetrics[dataIndex]);
 	}
 
+	var clicked = false;
+	var x = null; 
+	var y = null;
+	reg = new RegExp("([0-9]*)px", "i");
+
+	function moveService() {
+		var event = d3.event;
+		clicked = true;
+		//if(event.offsetX || event.offsetY) {
+		//	clickX=event.offsetX;
+		//	clickY=event.offsetY;
+		//}
+		//else {
+			clickX=event.pageX;
+			clickY=event.pageY;
+		//}
+		itemX = d3.select("#" + chart.id + "LegendContainer").style("left");
+		itemY = d3.select("#" + chart.id + "LegendContainer").style("top");
+		arX = reg.exec(itemX);
+		arY = reg.exec(itemY);
+		Xoffset = clickX - arX[1];
+		Yoffset = clickY - arY[1];
+		d3.select("#" + chart.id + "LegendTitle").classed('legend-transparent-drag', true);
+		d3.select("#" + chart.id + "LegendContent").classed('legend-transparent-drag', true);
+		d3.select("#" + chart.id + "LegendContainer").style('cursor', 'move');
+	}
+	
+	function unmoveService() {
+		clicked = false;
+		d3.select("#" + chart.id + "LegendContainer").style("top", y +'px');
+		d3.select("#" + chart.id + "LegendContainer").style("left", x +'px');
+		d3.select("#" + chart.id + "LegendTitle").classed('legend-transparent-drag', false);
+		d3.select("#" + chart.id + "LegendContent").classed('legend-transparent-drag', false);
+		d3.select("#" + chart.id + "LegendContainer").style('cursor', 'auto');
+	}
+	
+	function movers() {
+		var event = d3.event;
+		if(clicked == true) {
+			//if(event.offsetX || event.offsetY) {
+			//	x=event.offsetX - Xoffset;
+			//	y=event.offsetY - Yoffset;
+			//}
+			//else {
+				x=event.pageX - Xoffset;
+				y=event.pageY -Yoffset;
+			//}
+			d3.select("#" + chart.id + "LegendTitle").classed('legend-transparent-drag', true);
+			d3.select("#" + chart.id + "LegendContent").classed('legend-transparent-drag', true);
+			d3.select("#" + chart.id + "LegendContainer").style("top", y +'px');
+			d3.select("#" + chart.id + "LegendContainer").style("left", x +'px');
+		}
+	}
+
 	function legendMouseover() {
 		if (mouseover) return;
-		var legendDiv = d3.select("#" + chart.id + " .legend");
+		var legendDiv = d3.select("#" + chart.id + " .legend-title");
 		legendDiv.classed("legend-transparent", false);
 		var legendContentDiv = d3.select("#" + chart.id + " .legend-content");
 		legendContentDiv.classed("legend-transparent", false);
@@ -81,7 +157,7 @@ function Legend(chart) {
 
 	function legendMouseout() {
 		if (!mouseover) return;
-		var legendDiv = d3.select("#" + chart.id + " .legend");
+		var legendDiv = d3.select("#" + chart.id + " .legend-title");
 		legendDiv.classed("legend-transparent", true);
 		var legendContentDiv = d3.select("#" + chart.id + " .legend-content");
 		legendContentDiv.classed("legend-transparent", true);
@@ -91,8 +167,10 @@ function Legend(chart) {
 	function toggleContent() {
 		if (contentShow) {
 			legendContent.style("display", "none");
+			drawTriangleUp($('#' + chart.id + 'ToggleIcon')[0]);
 		} else {
 			legendContent.style("display", "inline-block");
+			drawTriangle($('#' + chart.id + 'ToggleIcon')[0]);
 		}
 		contentShow = !contentShow;
 	}
