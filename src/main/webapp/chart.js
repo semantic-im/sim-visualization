@@ -148,12 +148,18 @@ function Chart(id, width, height) {
 Chart.prototype.init = function(color) {
 	var chart = this;
 	
+	d3.select("#" + this.id)
+		.append("div")
+		.attr("class", "chart-settings")
+		.style("left", (chart.allChartWidth - 26) + "px")
+		.style("top", 10 + "px")
+		.on("click", function() {chartSettingsDisplay(chart);});
+	
 	d3.select("#" + chart.id).on("mousemove", function() {
 		for (var i = 0; i < chart.mouseMoveHandlers.length; i++) {
 			chart.mouseMoveHandlers[i].call();
 		}
 		if (chart.xx != null) {
-			var multipleMetrics = (chart.chartMetrics.length > 1);
 			
 			// Compute the new (clamped) focus region.
 			var xy = chart.x.invert(d3.svg.mouse(chart.active[0][0])[0]);
@@ -168,6 +174,7 @@ Chart.prototype.init = function(color) {
 			chart.x0 = Math.max(chart.x.domain()[0], chart.x0);
 			chart.x1 = Math.min(chart.x.domain()[1], chart.x1);
 
+			/*
 			// Update the x-scale. TODO Recycle this scale?
 			var tx = d3.scale.linear().domain([ chart.x0, chart.x1 ])
 				//.range([ chart.yLabelWidth, chart.chartWidth + chart.yLabelWidth ]);
@@ -175,12 +182,12 @@ Chart.prototype.init = function(color) {
 			
 			var metrics = chart.chartMetrics;
 			for (var i = 0; i < metrics.length; i++) {
-				var newData = computeFocusData(chart, metrics[i]);
+				//var newData = computeFocusData(chart, metrics[i]);
 				
 				// Recompute the focus path.
 				if (multipleMetrics) {
 					chart.focusArea.select("#" + validID(metrics[i].metric))
-					.data([newData])
+					//.data([newData])
 					.attr("d", 
 						d3.svg.line().x(function(d) {
 							return tx(d.x);
@@ -191,7 +198,7 @@ Chart.prototype.init = function(color) {
 					);					
 				} else {
 					chart.focusArea.select("#" + validID(metrics[i].metric))
-						.data([newData])
+						//.data([newData])
 						.attr("d", 
 							d3.svg.area().x(function(d) {
 								return tx(d.x);
@@ -204,13 +211,16 @@ Chart.prototype.init = function(color) {
 						);
 				}
 			}
-			
-			// Reposition the active region rect.
-			chart.active.attr("x", chart.x(chart.x0)).attr("width", chart.x(chart.x1) - chart.x(chart.x0));
-			
+						
 			//console.debug(chart.focusArea.selectAll("text")[0][0]);
 			chart.focusArea.selectAll("#x0label").text(shortTime(new Date(chart.x0)));
 			chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.x1)));
+			*/
+			
+			chart.updateAxisX();
+			
+			// Reposition the active region rect.
+			chart.active.attr("x", chart.x(chart.x0)).attr("width", chart.x(chart.x1) - chart.x(chart.x0));
 		}
 	});
 	d3.select("#" + chart.id).on("mouseup", function() {chart.xx = null;});
@@ -248,6 +258,99 @@ Chart.prototype.init = function(color) {
 		.attr("transform", "translate(" + this.leftSpaceWidth + "," + (this.topSpaceHeight + this.h1) + ")");
 	
 	this.legend = new Legend(this);
+};
+
+Chart.prototype.updateAxisX = function() {
+	var chart = this;
+	var multipleMetrics = (this.chartMetrics.length > 1);
+	
+	// Update the x-scale. TODO Recycle this scale?
+	var tx = d3.scale.linear().domain([ this.x0, this.x1 ])
+		//.range([ chart.yLabelWidth, chart.chartWidth + chart.yLabelWidth ]);
+		.range([ 0, this.chartWidth ]);
+	
+	var metrics = this.chartMetrics;
+	for (var i = 0; i < metrics.length; i++) {
+		var newData = computeFocusData(chart, metrics[i]);
+		
+		// Recompute the focus path.
+		if (multipleMetrics) {
+			this.focusArea.select("#" + validID(metrics[i].metric))
+			.data([newData])
+			.attr("d", 
+				d3.svg.line().x(function(d) {
+					return tx(d.x);
+				})
+				.y(function(d) {
+					return chart.y1(d.y);
+				})
+			);					
+		} else {
+			this.focusArea.select("#" + validID(metrics[i].metric))
+				.data([newData])
+				.attr("d", 
+					d3.svg.area().x(function(d) {
+						return tx(d.x);
+					})
+					//.y0(y1(0))
+					.y0(chart.y1(chart.minY))
+					.y1(function(d) {
+						return chart.y1(d.y);
+					})
+				);
+		}
+	}
+				
+	//console.debug(chart.focusArea.selectAll("text")[0][0]);
+	chart.focusArea.selectAll("#x0label").text(shortTime(new Date(chart.x0)));
+	chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.x1)));
+};
+
+Chart.prototype.updateContextAxisX = function() {
+	var chart = this;
+	var multipleMetrics = (this.chartMetrics.length > 1);
+	
+	// Update the x-scale. TODO Recycle this scale?
+	var tx = d3.scale.linear().domain([ this.x0, this.x1 ])
+		//.range([ chart.yLabelWidth, chart.chartWidth + chart.yLabelWidth ]);
+		.range([ 0, this.chartWidth ]);
+	
+	var metrics = this.chartMetrics;
+	for (var i = 0; i < metrics.length; i++) {
+		var newData = computeFocusData(chart, metrics[i]);
+		
+		// Recompute the focus path.
+		if (multipleMetrics) {
+			this.context.select("#" + validID(metrics[i].metric) + "Context")
+			.data([newData])
+			.attr("d", 
+				d3.svg.line().x(function(d) {
+					return tx(d.x);
+				})
+				.y(function(d) {
+					return chart.y2(d.y);
+				})
+			);					
+		} else {
+			this.context.select("#" + validID(metrics[i].metric) + "Context")
+				.data([newData])
+				.attr("d", 
+					d3.svg.area().x(function(d) {
+						return tx(d.x);
+					})
+					//.y0(y1(0))
+					.y0(chart.y2(chart.minY))
+					.y1(function(d) {
+						return chart.y2(d.y);
+					})
+				);
+		}
+		
+	}
+				
+	//console.debug(chart.focusArea.selectAll("text")[0][0]);
+	chart.context.selectAll("#x0ContextLabel").text(shortTime(new Date(chart.x0)));
+	chart.context.selectAll("#x1ContextLabel").text(shortTime(new Date(chart.x1)));
 };
 
 function computeFocusData(chart, metric) {
@@ -451,6 +554,7 @@ Chart.prototype.drawMetric = function(metric) {
 	
 	var contextPath = this.context.append("svg:path")
 		.data([metric.data])
+		.attr("id", validID(metric.metric) + "Context")
 		.attr("pointer-events", "none");
 
 	if (multipleMetrics) {
@@ -560,12 +664,14 @@ Chart.prototype.drawChart = function() {
 		.attr("y2",	this.y2(this.minY));
 	this.context.selectAll("text").remove();
 	this.context.append("svg:text")
+		.attr("id", "x0ContextLabel")
 		.attr("font-family", "Verdana")
 		.attr("font-size", "8")
 		.attr("x", 0)
 		.attr("y", this.h2 + 10)
 		.text(shortTime(new Date(this.minX)));
 	this.context.append("svg:text")
+		.attr("id", "x1ContextLabel")
 		.attr("font-family", "Verdana")
 		.attr("font-size", "8")
 		.attr("text-anchor", "end")

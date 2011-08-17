@@ -68,12 +68,13 @@ function Legend(chart) {
 				.attr("id", validID(metric.metric) + "MetricLegend");
 			div.append("canvas")
 				.attr("id", validID(metric.metric) + "LegendIcon")
-				.attr("width", "12")
-				.attr("height", "12")
+				.attr("width", "16")
+				.attr("height", "16")
 				.attr("class", "metric-icon");
-			drawCircle($('#' + validID(metric.metric) + "LegendIcon")[0], 6, metric.fill);
+			drawCircle($('#' + validID(metric.metric) + "LegendIcon")[0], 8, metric.fill);
 			div.append("span")
-				.attr("class", "metric-label").text(metric.metricLabel);
+				.attr("class", "metric-label")
+				.text(metric.metricLabel);
 			div.append("div")
 				.attr("id", validID(metric.metric) + "MetricLegendDelete")
 				.attr("data", i)
@@ -95,8 +96,7 @@ function Legend(chart) {
 	var clicked = false;
 	var x = null; 
 	var y = null;
-	reg = new RegExp("([0-9]*)px", "i");
-
+	
 	function moveService() {
 		var event = d3.event;
 		clicked = true;
@@ -110,8 +110,8 @@ function Legend(chart) {
 		//}
 		itemX = d3.select("#" + chart.id + "LegendContainer").style("left");
 		itemY = d3.select("#" + chart.id + "LegendContainer").style("top");
-		arX = reg.exec(itemX);
-		arY = reg.exec(itemY);
+		arX = pxRegExp.exec(itemX);
+		arY = pxRegExp.exec(itemY);
 		Xoffset = clickX - arX[1];
 		Yoffset = clickY - arY[1];
 		d3.select("#" + chart.id + "LegendTitle").classed('legend-transparent-drag', true);

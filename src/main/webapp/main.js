@@ -314,6 +314,8 @@ var atomicMetrics = [PLUGIN_BEGIN_EXECUTION_TIME,
                           'Workflow Thread Wait Time',
                           'Workflow Total Response Time'];
 
+var pxRegExp = new RegExp("([0-9]*)px", "i");
+
 var clientWidth = window.innerWidth - 2,//document.all.ontoview.clientWidth,
 	clientHeight = window.innerHeight - 1,//document.all.ontoview.clientHeight;
 	clientTop = 10,
@@ -328,6 +330,13 @@ if (clientHeight < 600) {
 }
 //console.debug(w);
 //console.debug(h);
+
+String.prototype.lpad = function(padString, length) {
+	var str = this;
+    while (str.length < length)
+        str = padString + str;
+    return str;
+};
 
 function validID(id) {
 	return id.replace("#", "_").replace(new RegExp("\\.", "g"), "").replace(new RegExp("/", "g"), "").replace(new RegExp(":", "g"), "").replace(new RegExp("\\$", "g"), "_");

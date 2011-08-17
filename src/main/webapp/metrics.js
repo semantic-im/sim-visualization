@@ -393,6 +393,10 @@ $(document).ready(function() {
 	}
 	//~~
 
+	//chart settings
+	chartSettingsInit();
+	//~~
+	
 	d3.select("#charts-dashboard")
 		.style("width", chartsDashboardWidth + "px")
 		.style("height", chartsDashboardHeight + "px")

@@ -63,7 +63,17 @@ body {
 	display: inline-block;
 	overflow: hidden;
 }
-	
+
+.chart-settings {
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	display: inline-block;
+	background: url(./img/settings.png);
+	cursor: pointer;
+	z-index: 99;
+}
+
 .metric-container {
 	display: inline-block;
 	padding: 0;
@@ -160,10 +170,10 @@ line.chart {
 }
 
 .legend-delete {
-	width: 10px;
-	height: 10px;
+	vertical-align: middle;
+	width: 16px;
+	height: 16px;
 	display: inline-block;
-	margin-top: 6px;
 	margin-left: 4px;
 	background: url(./img/delete.png);
 	cursor: pointer;

@@ -5,6 +5,7 @@
     <script type="text/javascript" src="./jquery.ui/jquery-1.5.1.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.core.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.widget.js"></script>
+    <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.dialog.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.button.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.mouse.js"></script>
     <script type="text/javascript" src="./jquery.ui/ui/jquery.ui.draggable.js"></script>
@@ -22,6 +23,8 @@
 	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.scale.js"></script> 
 	<script type="text/javascript" src="./jquery.ui/ui/jquery.effects.shake.js"></script --> 
     <script type="text/javascript" src="./jquery.ui/ui/jquery.effects.slide.js"></script>
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.ui.position.js"></script>
+	<script type="text/javascript" src="./jquery.ui/ui/jquery.ui.datepicker.js"></script>
 
     <script type="text/javascript" src="./jshashtable-2.1.js"></script>
     <script type="text/javascript" src="./jshashset.js"></script>
@@ -38,6 +41,7 @@
   <body>
    	<script type="text/javascript" src="main.js"></script>
    	<script type="text/javascript" src="legend.js"></script>
+   	<script type="text/javascript" src="chart-settings.js"></script>
    	<script type="text/javascript" src="chart.js"></script>
    	<script type="text/javascript" src="metrics.js"></script>
    	
@@ -76,6 +80,22 @@
     </div>
     
     <div id="charts-dashboard">
+    	<div id="chartSettings" style="display: none">
+    		From date: <input type="text" id="fromDate">
+    		<div>
+	    		<div style="display: inline-block; width:140px;">
+	    			<label for="fromTime">From time: </label><input type="text" id="fromTime" style="border:0; color:#f6931f; font-weight:bold;">
+	    		</div>
+	    		<div id="fromTimeSlider" style="display: inline-block; width: 300px;"></div><br/>
+	    	</div>
+    		To date: <input type="text" id="toDate">
+    		<div>
+	    		<div style="display: inline-block; width:140px;">
+	    			<label for="toTime">To time: </label><input type="text" id="toTime" style="border:0; color:#f6931f; font-weight:bold;">
+	    		</div>
+	    		<div id="toTimeSlider" style="display: inline-block; width: 300px;"></div>
+    		</div>
+    	</div>
     </div>
   </body>
 </html>
