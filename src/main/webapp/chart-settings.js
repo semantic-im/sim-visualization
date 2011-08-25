@@ -60,11 +60,13 @@ function chartSettingsUpdateChart(chart) {
 	
 	chart.x0 = +timeFormat.parse(from);
 	chart.x1 = +timeFormat.parse(to);
-	chart.updateAxisX();
-	chart.updateContextAxisX();
+	chart.updateFocusData();
+	chart.updateFocus();
+	chart.updateContext();
 	
-	chart.x.domain([ chart.x0, chart.x1 ]);
-	chart.active.attr("x", chart.x(chart.x0)).attr("width", chart.x(chart.x1) - chart.x(chart.x0));
+	chart.xFocus.domain([ chart.x0, chart.x1 ]);
+	chart.xContext.domain([ chart.x0, chart.x1 ]);
+	chart.active.attr("x", chart.xContext(chart.x0)).attr("width", chart.xContext(chart.x1) - chart.xContext(chart.x0));
 	
 	$("#chartSettings").dialog("close");
 }

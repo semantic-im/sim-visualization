@@ -4,7 +4,7 @@ var p,
 
 //type
 Metric.VALUES_TYPE = "VALUES_TYPE";
-Metric.INCREMENT_TYPE = "VALUES_TYPE";
+Metric.INCREMENT_TYPE = "INCREMENT_TYPE";
 
 //measurement units
 Metric.KILOBYTES = "KILOBYTES";
@@ -22,7 +22,8 @@ function Metric() {
 	this.fill = null;
 	
 	this.data = new Array();
-	
+	this.focusData = new Array();
+
 	this.type = function() {
 		switch (this.metric) {
 		case IO_READ:
@@ -117,19 +118,25 @@ function Chart(id, width, height) {
 	p = 20;
 	this.chartMetrics = new Array();
 	
-	this.x = d3.scale.linear().range([0, this.chartWidth]),
-	this.y1 = d3.scale.linear().range([this.h1 - p, 0]),
+	this.xFocus = d3.scale.linear().range([0, this.chartWidth]);
+	this.xContext = d3.scale.linear().range([0, this.chartWidth]);
+	this.y1 = d3.scale.linear().range([this.h1 - p, 0]);
 	this.y2 = d3.scale.linear().range([this.h2, 0]);
 	
 	this.x0, // start of focus region
 	this.x1, // end of focus region
 	this.xx = null, // drag state
 
-	this.minX,
-	this.maxX,
-	this.minY = Infinity,
+	this.minX;
+	this.maxX;
+	this.focusMinX = Infinity;
+	this.focusMaxX = -Infinity;
+	this.minY = Infinity;
 	this.maxY = -Infinity;
+	this.focusMinY = Infinity;
+	this.focusMaxY = -Infinity;
 
+	
 	this.chartContainerVisible = false;
 	
 	this.chartSvgArea;
@@ -160,9 +167,8 @@ Chart.prototype.init = function(color) {
 			chart.mouseMoveHandlers[i].call();
 		}
 		if (chart.xx != null) {
-			
 			// Compute the new (clamped) focus region.
-			var xy = chart.x.invert(d3.svg.mouse(chart.active[0][0])[0]);
+			var xy = chart.xContext.invert(d3.svg.mouse(chart.active[0][0])[0]);
 			if (chart.xx < xy) {
 				chart.x0 = chart.xx;
 				chart.x1 = xy;
@@ -171,56 +177,27 @@ Chart.prototype.init = function(color) {
 				chart.x1 = chart.xx;
 			} else
 				return;
-			chart.x0 = Math.max(chart.x.domain()[0], chart.x0);
-			chart.x1 = Math.min(chart.x.domain()[1], chart.x1);
+			chart.x0 = Math.max(chart.xContext.domain()[0], chart.x0);
+			chart.x1 = Math.min(chart.xContext.domain()[1], chart.x1);
 
-			/*
-			// Update the x-scale. TODO Recycle this scale?
-			var tx = d3.scale.linear().domain([ chart.x0, chart.x1 ])
-				//.range([ chart.yLabelWidth, chart.chartWidth + chart.yLabelWidth ]);
-				.range([ 0, chart.chartWidth ]);
+			isBarTypeChart = chart.isBarTypeChart();
 			
-			var metrics = chart.chartMetrics;
-			for (var i = 0; i < metrics.length; i++) {
-				//var newData = computeFocusData(chart, metrics[i]);
-				
-				// Recompute the focus path.
-				if (multipleMetrics) {
-					chart.focusArea.select("#" + validID(metrics[i].metric))
-					//.data([newData])
-					.attr("d", 
-						d3.svg.line().x(function(d) {
-							return tx(d.x);
-						})
-						.y(function(d) {
-							return chart.y1(d.y);
-						})
-					);					
-				} else {
-					chart.focusArea.select("#" + validID(metrics[i].metric))
-						//.data([newData])
-						.attr("d", 
-							d3.svg.area().x(function(d) {
-								return tx(d.x);
-							})
-							//.y0(y1(0))
-							.y0(chart.y1(chart.minY))
-							.y1(function(d) {
-								return chart.y1(d.y);
-							})
-						);
-				}
+			chart.updateFocusData(isBarTypeChart);
+			
+			if (!isBarTypeChart) {
+				chart.updateFocus();
+			} else {
+				chart.drawBarChart();
 			}
-						
 			//console.debug(chart.focusArea.selectAll("text")[0][0]);
 			chart.focusArea.selectAll("#x0label").text(shortTime(new Date(chart.x0)));
 			chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.x1)));
-			*/
-			
-			chart.updateAxisX();
-			
+
+			chart.focusArea.selectAll("#y0label").text(chart.getYLabel(this.focusMinY));
+			chart.focusArea.selectAll("#y1label").text(chart.getYLabel(this.focusMaxY));
+
 			// Reposition the active region rect.
-			chart.active.attr("x", chart.x(chart.x0)).attr("width", chart.x(chart.x1) - chart.x(chart.x0));
+			chart.active.attr("x", chart.xContext(chart.x0)).attr("width", chart.xContext(chart.x1) - chart.xContext(chart.x0));
 		}
 	});
 	d3.select("#" + chart.id).on("mouseup", function() {chart.xx = null;});
@@ -252,6 +229,7 @@ Chart.prototype.init = function(color) {
 		.text("DROP HERE!");
 
 	this.focusArea = this.chartSvgArea.append("svg:g")
+		.attr("id", "focusArea")
 		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
 	
 	this.context = this.chartSvgArea.append("svg:g")
@@ -260,62 +238,118 @@ Chart.prototype.init = function(color) {
 	this.legend = new Legend(this);
 };
 
-Chart.prototype.updateAxisX = function() {
+Chart.prototype.updateFocusData = function(isBarTypeChart) {
+	var metrics = this.chartMetrics;
+	var minY = Infinity, maxY = -Infinity;
+	var minX = Infinity, maxX = -Infinity;
+	for (var i = 0; i < metrics.length; i++) {
+		var data = computeFocusData(this, metrics[i], isBarTypeChart);
+		metrics[i].focusData = data;
+		for (var j = 0; j < data.length; j++) {
+			if (data[j].y < minY) {
+				minY = data[j].y;
+			}
+			if (data[j].y > maxY) {
+				maxY = data[j].y;
+			}
+			if (data[j].x < minX) {
+				minX = data[j].x;
+			}
+			if (data[j].x > maxX) {
+				maxX = data[j].x;
+			}
+		}
+	}
+	if (minY != maxY) { //only when there is something to display change the domain
+		this.focusMinY = minY;
+		this.focusMaxY = maxY;
+		if (this.focusMinX > 0 && isBarTypeChart) { //give min bars some height (10 % from min and max Y)
+			this.focusMinY = this.focusMinY - ((this.focusMaxY - this.focusMinY) / 10);
+			if (this.focusMinY < 0) {
+				this.focusMinY = 0;
+			}
+		}
+		this.y1.domain([this.focusMinY, this.focusMaxY]);
+	}
+	if (minX != maxX) { //only when there is something to display change the domain
+		this.focusMinX = minX;
+		this.focusMaxX = maxX;
+		this.xFocus.domain([ this.focusMinX, this.focusMaxX ]);
+	}
+};
+
+Chart.prototype.updateFocus = function() {
 	var chart = this;
 	var multipleMetrics = (this.chartMetrics.length > 1);
 	
+	this.focusArea.selectAll("rect.bar").remove();
+	
 	// Update the x-scale. TODO Recycle this scale?
-	var tx = d3.scale.linear().domain([ this.x0, this.x1 ])
-		//.range([ chart.yLabelWidth, chart.chartWidth + chart.yLabelWidth ]);
-		.range([ 0, this.chartWidth ]);
+	//var tx = d3.scale.linear().domain([ this.x0, this.x1 ])
+	//	.range([ 0, this.chartWidth ]);
 	
 	var metrics = this.chartMetrics;
 	for (var i = 0; i < metrics.length; i++) {
-		var newData = computeFocusData(chart, metrics[i]);
+		//var newData = computeFocusData(chart, metrics[i]);
 		
 		// Recompute the focus path.
 		if (multipleMetrics) {
 			this.focusArea.select("#" + validID(metrics[i].metric))
-			.data([newData])
+			.data([metrics[i].focusData])
+			.style("stroke", this.fill(metrics[i].fill))
 			.attr("d", 
 				d3.svg.line().x(function(d) {
-					return tx(d.x);
+					return chart.xFocus(d.x);
 				})
 				.y(function(d) {
 					return chart.y1(d.y);
 				})
-			);					
+			);
 		} else {
 			this.focusArea.select("#" + validID(metrics[i].metric))
-				.data([newData])
+				.data([metrics[i].focusData])
+				.style("fill", metrics[i].fill)
 				.attr("d", 
 					d3.svg.area().x(function(d) {
-						return tx(d.x);
+						return chart.xFocus(d.x);
 					})
 					//.y0(y1(0))
-					.y0(chart.y1(chart.minY))
+					.y0(chart.y1(chart.focusMinY))
 					.y1(function(d) {
 						return chart.y1(d.y);
 					})
 				);
 		}
 	}
-				
-	//console.debug(chart.focusArea.selectAll("text")[0][0]);
-	chart.focusArea.selectAll("#x0label").text(shortTime(new Date(chart.x0)));
-	chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.x1)));
 };
 
-Chart.prototype.updateContextAxisX = function() {
+Chart.prototype.updateContext = function() {
 	var chart = this;
 	var multipleMetrics = (this.chartMetrics.length > 1);
 	
 	// Update the x-scale. TODO Recycle this scale?
-	var tx = d3.scale.linear().domain([ this.x0, this.x1 ])
-		//.range([ chart.yLabelWidth, chart.chartWidth + chart.yLabelWidth ]);
-		.range([ 0, this.chartWidth ]);
+	//var tx = d3.scale.linear().domain([ this.x0, this.x1 ])
+	//	.range([ 0, this.chartWidth ]);
+	this.xContext.domain([ this.x0, this.x1 ]);
 	
 	var metrics = this.chartMetrics;
+	var newData = new Array();
+	var minY = Infinity, maxY = -Infinity;
+	for (var i = 0; i < metrics.length; i++) {
+		var data = computeFocusData(chart, metrics[i]);
+		newData.push(data);
+		for (var j = 0; j < data.length; j++) {
+			if (data[j].y < minY) {
+				minY = data[j].y;
+			}
+			if (data[j].y > maxY) {
+				maxY = data[j].y;
+			}
+		}
+	}
+	if (minY != maxY) { //only when there is something to display change the domain
+		this.y2.domain([minY, maxY]);
+	}
 	for (var i = 0; i < metrics.length; i++) {
 		var newData = computeFocusData(chart, metrics[i]);
 		
@@ -325,7 +359,7 @@ Chart.prototype.updateContextAxisX = function() {
 			.data([newData])
 			.attr("d", 
 				d3.svg.line().x(function(d) {
-					return tx(d.x);
+					return chart.xContext(d.x);
 				})
 				.y(function(d) {
 					return chart.y2(d.y);
@@ -336,10 +370,10 @@ Chart.prototype.updateContextAxisX = function() {
 				.data([newData])
 				.attr("d", 
 					d3.svg.area().x(function(d) {
-						return tx(d.x);
+						return chart.xContext(d.x);
 					})
 					//.y0(y1(0))
-					.y0(chart.y2(chart.minY))
+					.y0(chart.y2(minY))
 					.y1(function(d) {
 						return chart.y2(d.y);
 					})
@@ -353,7 +387,7 @@ Chart.prototype.updateContextAxisX = function() {
 	chart.context.selectAll("#x1ContextLabel").text(shortTime(new Date(chart.x1)));
 };
 
-function computeFocusData(chart, metric) {
+function computeFocusData(chart, metric, isBarTypeChart) {
 	var newData = new Array();
 	var lastMinXData = null, firstMaxXData = null;
 	var data = metric.data;
@@ -365,7 +399,7 @@ function computeFocusData(chart, metric) {
 		if (data[i].x >= chart.x1) {
 			if (firstMaxXData == null) {
 				firstMaxXData = data[i];
-				if (firstMaxXData.x != chart.x1) {
+				if (!isBarTypeChart && (firstMaxXData.x != chart.x1)) {
 					var newElement = new Object();
 					newElement.x = chart.x1;
 					newElement.y = (firstMaxXData.y + data[i - 1].y) / 2;
@@ -377,7 +411,7 @@ function computeFocusData(chart, metric) {
 			continue;
 		}
 		if (lastMinXData != null) {
-			if (lastMinXData.x != chart.x0) {
+			if (!isBarTypeChart && (lastMinXData.x != chart.x0)) {
 				var newElement = new Object();
 				newElement.x = chart.x0;
 				newElement.y = (lastMinXData.y + data[i].y) / 2;
@@ -534,7 +568,7 @@ Chart.prototype.drawMetric = function(metric) {
 		.attr("id", validID(metric.metric));
 	
 	if (multipleMetrics) {
-		focusPath.attr("d", d3.svg.line().x(function(d) {return chart.x(d.x);})
+		focusPath.attr("d", d3.svg.line().x(function(d) {return chart.xFocus(d.x);})
 				.y(function(d) {
 					return chart.y1(d.y);
 				}));
@@ -542,7 +576,7 @@ Chart.prototype.drawMetric = function(metric) {
 		focusPath.style("stroke-width", "2px");
 		focusPath.style("fill", "none");
 	} else {
-		focusPath.attr("d", d3.svg.area().x(function(d) {return chart.x(d.x);})
+		focusPath.attr("d", d3.svg.area().x(function(d) {return chart.xFocus(d.x);})
 				// .y0(y1(0))
 				.y0(this.y1(this.minY))
 				.y1(function(d) {
@@ -559,7 +593,7 @@ Chart.prototype.drawMetric = function(metric) {
 
 	if (multipleMetrics) {
 		contextPath.attr("d", d3.svg.line().x(function(d) {
-			return chart.x(d.x);
+			return chart.xContext(d.x);
 		})
 		.y(function(d) {
 			return chart.y2(d.y);
@@ -569,7 +603,7 @@ Chart.prototype.drawMetric = function(metric) {
 		contextPath.style("fill", "none");
 	} else {
 		contextPath.attr("d", d3.svg.area().x(function(d) {
-			return chart.x(d.x);
+			return chart.xContext(d.x);
 		})
 		//.y0(y2(0))
 		.y0(this.y2(this.minY)).y1(function(d) {
@@ -585,7 +619,8 @@ Chart.prototype.drawChart = function() {
 	var chart = this;
 	
 	// Update x- and y-scales.
-	this.x.domain([ this.minX, this.maxX ]);
+	this.xFocus.domain([ this.minX, this.maxX ]);
+	this.xContext.domain([ this.minX, this.maxX ]);
 	this.y1.domain([ this.minY, this.maxY ]);
 	this.y2.domain([ this.minY, this.maxY ]);
 
@@ -593,6 +628,7 @@ Chart.prototype.drawChart = function() {
 	this.chartSvgArea.selectAll("text").remove();
 	
 	// Focus view.
+	this.focusArea.selectAll("rect.bar").remove();
 	this.focusArea.selectAll("path").remove();
 
 	this.focusArea.selectAll("line").remove();
@@ -650,7 +686,7 @@ Chart.prototype.drawChart = function() {
 		.attr("pointer-events",	"all")
 		.attr("cursor", "crosshair")
 		.on("mousedown", function() {
-			chart.xx = chart.x.invert(d3.svg.mouse(this)[0]);
+			chart.xx = chart.xContext.invert(d3.svg.mouse(this)[0]);
 		});
 
 	this.context.selectAll("path").remove();
@@ -684,10 +720,10 @@ Chart.prototype.drawChart = function() {
 	this.active = this.context.append("svg:rect")
 			.attr("pointer-events", "none")
 			.attr("id", this.id + "active")
-			.attr("x", this.x(this.x0 = this.minX))
+			.attr("x", this.xContext(this.x0 = this.minX))
 			.attr("y", 0)
 			.attr("height", this.h2)
 			//.attr("width", this.x(this.x1 = (this.minX + 1e11)) - this.x(this.x0))
-			.attr("width", this.x(this.x1 = this.maxX) - this.x(this.x0))
+			.attr("width", this.xContext(this.x1 = this.maxX) - this.xContext(this.x0))
 			.attr("fill", "lightcoral").attr("fill-opacity", .2);
 };
