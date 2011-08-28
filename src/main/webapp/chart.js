@@ -193,8 +193,8 @@ Chart.prototype.init = function(color) {
 			chart.focusArea.selectAll("#x0label").text(shortTime(new Date(chart.x0)));
 			chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.x1)));
 
-			chart.focusArea.selectAll("#y0label").text(chart.getYLabel(this.focusMinY));
-			chart.focusArea.selectAll("#y1label").text(chart.getYLabel(this.focusMaxY));
+			chart.focusArea.selectAll("#y0label").text(chart.getYLabel(chart.focusMinY));
+			chart.focusArea.selectAll("#y1label").text(chart.getYLabel(chart.focusMaxY));
 
 			// Reposition the active region rect.
 			chart.active.attr("x", chart.xContext(chart.x0)).attr("width", chart.xContext(chart.x1) - chart.xContext(chart.x0));

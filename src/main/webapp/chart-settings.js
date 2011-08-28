@@ -58,8 +58,15 @@ function chartSettingsUpdateChart(chart) {
 	var to = $("#toDate").val() + " " + $("#toTime").val();
 	var timeFormat = d3.time.format("%d.%m.%Y %H:%M");
 	
+
 	chart.x0 = +timeFormat.parse(from);
 	chart.x1 = +timeFormat.parse(to);
+	if (chart.x0 < chart.minX) {
+		chart.x0 = chart.minX;
+	}
+	if (chart.x1 > chart.maxX) {
+		chart.x1 = chart.maxX;
+	}
 	chart.updateFocusData();
 	chart.updateFocus();
 	chart.updateContext();
