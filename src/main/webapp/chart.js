@@ -28,6 +28,8 @@ function Metric() {
 		switch (this.metric) {
 		case IO_READ:
 		case IO_WRITE:
+		case USER_CPU_TIME:
+		case WAIT_CPU_TIME:
 			return Metric.INCREMENT_TYPE;
 		default:
 			return Metric.VALUES_TYPE;
@@ -39,7 +41,7 @@ function Metric() {
 		case Metric.KILOBYTES:
 			return value + "K";
 		case Metric.PERCENTAGE:
-			return d3.format(".2%")(value);
+			return d3.format(".2f")(value) + "%";
 		case Metric.TIMESTAMP:
 			return d3.format(".2f")(value) + "ms";
 		default:
@@ -283,6 +285,7 @@ Chart.prototype.updateFocus = function() {
 	var multipleMetrics = (this.chartMetrics.length > 1);
 	
 	this.focusArea.selectAll("rect.bar").remove();
+	this.focusArea.selectAll("text.bar").remove();
 	
 	// Update the x-scale. TODO Recycle this scale?
 	//var tx = d3.scale.linear().domain([ this.x0, this.x1 ])
@@ -557,7 +560,7 @@ Chart.prototype.computeScales = function() {
 		if (data[n - 1].x > this.maxX) {
 			this.maxX = data[n - 1].x;
 		}
-	}	
+	}
 };
 
 Chart.prototype.drawMetric = function(metric) {

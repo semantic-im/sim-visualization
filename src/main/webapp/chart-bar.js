@@ -46,18 +46,77 @@ Chart.prototype.drawBarChart = function() {
 		.style("fill", "none")
 		.style("stroke", "none");
 	this.focusArea.selectAll("rect.bar").remove();
+	this.focusArea.selectAll("text.bar").remove();
 	
-	var bars = this.focusArea.selectAll("rect.bar").data(data)
-		.enter()
+	var enterNodes = this.focusArea.selectAll("rect.bar").data(data)
+		.enter();
+	var bars = enterNodes
 		.append("svg:rect")
 		.attr("class", "bar")
 		.attr("x", function(d, i) {return barWidth * i;})
 		.attr("y", function(d) {return chart.y1(d.y);})
 		.attr("width", function(d) {return barWidth;})
-		.attr("height", function(d) {return chart.y1(chart.focusMinY) - chart.y1(d.y);})
+		.attr("height", function(d) {
+			return chart.y1(chart.focusMinY) - chart.y1(d.y);
+		})
 		.style("fill", function(d) {return d.fill;});
-		
+
+	enterNodes.append("svg:text")
+		.attr("class", "bar")
+		.attr("x", function(d, i) {
+			if (barWidth < 60) {
+				return barWidth * i + (barWidth / 2) + 5;
+			} else {
+				return barWidth * i + (barWidth / 2);
+			}
+		})
+		.attr("y", function(d) {
+			if ((chart.y1(chart.focusMinY) - chart.y1(d.y)) < 80) { //height
+				return chart.y1(d.y) - 5;
+			} else {
+				return chart.y1(d.y) + 15;
+			}
+		})
+		.style("font-family", "Verdana")
+		.style("font-size", "10px")
+		.style("stroke", "0px")
+		.style("fill", function(d) {
+			if ((chart.y1(chart.focusMinY) - chart.y1(d.y)) < 80) { //height
+				return d.fill;
+			} else {
+				return "#FFFFFF";
+			}
+		})
+		.style("text-anchor", function(d) {
+			if (barWidth < 60) {
+				if ((chart.y1(chart.focusMinY) - chart.y1(d.y)) < 80) { //height
+					return "start";
+				} else {
+					return "end";
+				}
+			} else {
+				return "middle";
+			}
+		})
+		.attr("transform", function(d, i) {
+			if (barWidth < 60) {
+				if ((chart.y1(chart.focusMinY) - chart.y1(d.y)) < 80) { //height
+					return "rotate(-90 " + (barWidth * i + (barWidth / 2) + 5) + " " + (chart.y1(d.y) - 5) + ")";
+				} else {
+					return "rotate(-90 " + (barWidth * i + (barWidth / 2) + 5) + " " + (chart.y1(d.y) + 15) + ")";
+				}
+			} else {
+				return "";
+			}
+		})
+		.text(function(d) {
+			return chart.getYLabel(d.y);
+		});
+	
 	bars.append("svg:title")
-		.text(function(d) {return chart.getYLabel(d.y);});
+		.text(function(d) {
+			var timeFormat = d3.time.format("%d.%m.%y %H:%M:%S");
+			return "time=" + timeFormat(new Date(d.x)) + " value=" + chart.getYLabel(d.y);
+		});
 	
 };
