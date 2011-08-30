@@ -178,3 +178,8 @@ line.chart {
 	background: url(./img/delete.png);
 	cursor: pointer;
 }
+
+line.x-grid, line.y-grid {
+  stroke: #ccc;
+  shape-rendering: crispEdges;
+}

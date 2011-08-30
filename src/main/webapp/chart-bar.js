@@ -59,7 +59,10 @@ Chart.prototype.drawBarChart = function() {
 		.attr("height", function(d) {
 			return chart.y1(chart.focusMinY) - chart.y1(d.y);
 		})
-		.style("fill", function(d) {return d.fill;});
+		.style("fill", function(d) {return d.fill;})
+		.style("fill-opacity", ".8")
+		.style("stroke", function(d) {return d.fill;})
+		.style("stroke-width", "1px");
 
 	enterNodes.append("svg:text")
 		.attr("class", "bar")
@@ -116,7 +119,7 @@ Chart.prototype.drawBarChart = function() {
 	bars.append("svg:title")
 		.text(function(d) {
 			var timeFormat = d3.time.format("%d.%m.%y %H:%M:%S");
-			return "time=" + timeFormat(new Date(d.x)) + " value=" + chart.getYLabel(d.y);
+			return "time=" + timeFormat(new Date(d.x)) + " \nvalue=" + chart.getYLabel(d.y);
 		});
 	
 };

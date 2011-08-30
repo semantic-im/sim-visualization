@@ -39,9 +39,16 @@ function Metric() {
 	this.getFormattedValue = function(value) {
 		switch (this.measurementUnit()) {
 		case Metric.KILOBYTES:
-			return value + "K";
+			console.debug(value);
+			if (value > 1024 * 1024) {
+				return d3.format(".2f")(value/1024/1024) + "M";
+			} else if (value > 1024) {
+				return d3.format(".2f")(value/1024) + "Kb";
+			} else {
+				return Math.floor(value) + "b";
+			}
 		case Metric.PERCENTAGE:
-			return d3.format(".2f")(value) + "%";
+			return d3.format(".2%")(value);
 		case Metric.TIMESTAMP:
 			return d3.format(".2f")(value) + "ms";
 		default:
@@ -186,14 +193,16 @@ Chart.prototype.init = function(color) {
 			
 			chart.updateFocusData(isBarTypeChart);
 			
+			chart.drawGrid();
 			if (!isBarTypeChart) {
 				chart.updateFocus();
 			} else {
 				chart.drawBarChart();
 			}
+			
 			//console.debug(chart.focusArea.selectAll("text")[0][0]);
-			chart.focusArea.selectAll("#x0label").text(shortTime(new Date(chart.x0)));
-			chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.x1)));
+			chart.focusArea.selectAll("#x0label").text(shortTime(new Date(chart.focusMinX)));
+			chart.focusArea.selectAll("#x1label").text(shortTime(new Date(chart.focusMaxX)));
 
 			chart.focusArea.selectAll("#y0label").text(chart.getYLabel(chart.focusMinY));
 			chart.focusArea.selectAll("#y1label").text(chart.getYLabel(chart.focusMaxY));
@@ -299,7 +308,7 @@ Chart.prototype.updateFocus = function() {
 		if (multipleMetrics) {
 			this.focusArea.select("#" + validID(metrics[i].metric))
 			.data([metrics[i].focusData])
-			.style("stroke", this.fill(metrics[i].fill))
+			.style("stroke", metrics[i].fill)
 			.attr("d", 
 				d3.svg.line().x(function(d) {
 					return chart.xFocus(d.x);
@@ -312,6 +321,7 @@ Chart.prototype.updateFocus = function() {
 			this.focusArea.select("#" + validID(metrics[i].metric))
 				.data([metrics[i].focusData])
 				.style("fill", metrics[i].fill)
+				.style("stroke", metrics[i].fill)
 				.attr("d", 
 					d3.svg.area().x(function(d) {
 						return chart.xFocus(d.x);
@@ -501,6 +511,7 @@ Chart.prototype.displayChart = function() {
 	for (var i = 0; i < metrics.length; i++) {
 		this.drawMetric(metrics[i]);
 	}
+	this.drawGrid();
 };
 
 Chart.prototype.getYLabel = function(value) {
@@ -561,6 +572,10 @@ Chart.prototype.computeScales = function() {
 			this.maxX = data[n - 1].x;
 		}
 	}
+	this.focusMinY = this.minY;
+	this.focusMaxY = this.maxY;
+	this.focusMinX = this.minX;
+	this.focusMaxX = this.maxX;
 };
 
 Chart.prototype.drawMetric = function(metric) {
@@ -575,7 +590,7 @@ Chart.prototype.drawMetric = function(metric) {
 				.y(function(d) {
 					return chart.y1(d.y);
 				}));
-		focusPath.style("stroke", chart.fill(metric.fill));
+		focusPath.style("stroke", metric.fill);
 		focusPath.style("stroke-width", "2px");
 		focusPath.style("fill", "none");
 	} else {
@@ -585,8 +600,10 @@ Chart.prototype.drawMetric = function(metric) {
 				.y1(function(d) {
 					return chart.y1(d.y);
 				}));
-		focusPath.style("fill", chart.fill(metric.fill));
-		focusPath.style("stroke", "none");
+		focusPath.style("fill", metric.fill);
+		focusPath.style("fill-opacity", ".8");
+		focusPath.style("stroke", metric.fill);
+		focusPath.style("stroke-width", "1px");
 	}
 	
 	var contextPath = this.context.append("svg:path")
@@ -601,7 +618,7 @@ Chart.prototype.drawMetric = function(metric) {
 		.y(function(d) {
 			return chart.y2(d.y);
 		}));
-		contextPath.style("stroke", chart.fill(metric.fill));
+		contextPath.style("stroke", metric.fill);
 		contextPath.style("stroke-width", "1px");
 		contextPath.style("fill", "none");
 	} else {
@@ -612,7 +629,7 @@ Chart.prototype.drawMetric = function(metric) {
 		.y0(this.y2(this.minY)).y1(function(d) {
 			return chart.y2(d.y);
 		}));
-		contextPath.style("fill", chart.fill(metric.fill));
+		contextPath.style("fill", metric.fill);
 		contextPath.style("stroke", "none");
 	}
 
@@ -729,4 +746,143 @@ Chart.prototype.drawChart = function() {
 			//.attr("width", this.x(this.x1 = (this.minX + 1e11)) - this.x(this.x0))
 			.attr("width", this.xContext(this.x1 = this.maxX) - this.xContext(this.x0))
 			.attr("fill", "lightcoral").attr("fill-opacity", .2);
+};
+
+Chart.prototype.drawGrid = function() {
+	var verticalGridMinSpace = 120;
+	var verticalGridLineCount = Math.floor(this.allChartWidth / verticalGridMinSpace) - 1 - 1; //substract 1 for the start and 1 for the rest which will be distributed
+	
+	var differenceTimeMilliSeconds = this.focusMaxX - this.focusMinX;
+	var differenceTimeSeconds = Math.floor(differenceTimeMilliSeconds / 1000);
+	var differenceTimeMinutes = Math.floor(differenceTimeSeconds / 60);
+	var differenceTimeHours = Math.floor(differenceTimeMinutes / 60);
+	var differenceTimeDays = Math.floor(differenceTimeHours / 24);
+	var differenceTimeWeeks = Math.floor(differenceTimeDays / 7);
+	var differenceTimeMonths = Math.floor(differenceTimeDays / 4);
+	var differenceTimeYears = Math.floor(differenceTimeDays / 12);
+	
+	var areMilliSecondsGoodDivider = differenceTimeMilliSeconds > verticalGridLineCount;
+	var areSecondsGoodDivider = differenceTimeSeconds > verticalGridLineCount;
+	var areMinutesGoodDivider = differenceTimeMinutes > verticalGridLineCount;
+	var areHoursGoodDivider = differenceTimeHours > verticalGridLineCount;
+	var areDaysGoodDivider = differenceTimeDays > verticalGridLineCount;
+	var areWeeksGoodDivider = differenceTimeWeeks > verticalGridLineCount;
+	var areMonthsGoodDivider = differenceTimeMonths > verticalGridLineCount;
+	var areYearsGoodDivider = differenceTimeYears > verticalGridLineCount;
+	
+	var increment = 0;
+	var rest = 0;
+	var timeFormat = null;
+	if (!areMilliSecondsGoodDivider) {
+		//can't diplay vertical grid cause not enough values 
+		return;
+	} else if (!areSecondsGoodDivider) {
+		increment = Math.floor(differenceTimeMilliSeconds / verticalGridLineCount);
+		rest = differenceTimeMilliSeconds % verticalGridLineCount;
+		timeFormat = d3.time.format("%S");
+	} else if (!areMinutesGoodDivider) {
+		increment = Math.floor(differenceTimeSeconds / verticalGridLineCount) * 1000;
+		rest = (differenceTimeSeconds % verticalGridLineCount) * 1000;
+		timeFormat = d3.time.format("%M:%S");
+	} else if (!areHoursGoodDivider) {
+		increment = Math.floor(differenceTimeMinutes / verticalGridLineCount) * 1000 * 60;
+		rest = (differenceTimeMinutes % verticalGridLineCount) * 1000 * 60;
+		timeFormat = d3.time.format("%H:%M");
+	} else if (!areDaysGoodDivider) {
+		increment = Math.floor(differenceTimeHours / verticalGridLineCount) * 1000 * 60 * 60;
+		rest = (differenceTimeHours % verticalGridLineCount) * 1000 * 60 * 60;
+		timeFormat = d3.time.format("%a %H");
+	} else if (!areWeeksGoodDivider) {
+		increment = Math.floor(differenceTimeDays / verticalGridLineCount) * 1000 * 60 * 60 * 24;
+		rest = (differenceTimeDays % verticalGridLineCount) * 1000 * 60 * 60 * 24;
+		timeFormat = d3.time.format("%a");
+	} else if (!areMonthsGoodDivider) {
+		increment = Math.floor(differenceTimeWeeks / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
+		rest = (differenceTimeWeeks % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
+		timeFormat = d3.time.format("%W");
+	} else if (!areYearsGoodDivider) {
+		increment = Math.floor(differenceTimeMonths / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
+		rest = (differenceTimeMonths % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
+		timeFormat = d3.time.format("%d %b");
+	} else {
+		increment = Math.floor(differenceTimeYears / verticalGridLineCount)  * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
+		rest = (differenceTimeYears % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
+		timeFormat = d3.time.format("%b %y");		
+	}
+
+	var xValues = new Array();
+	var restAdding = Math.floor(rest / verticalGridLineCount);
+	for (var i = 1; i < verticalGridLineCount; i++) {
+		xValues.push(this.focusMinX + (increment * i) + (restAdding * i));
+	}
+	
+	this.focusArea.selectAll("line.x-grid").remove();
+	this.focusArea.selectAll("line.y-grid").remove();
+	this.focusArea.selectAll("text.x-grid").remove();
+	this.focusArea.selectAll("text.y-grid").remove();
+	
+	var chart = this;
+	this.focusArea.selectAll("line.x-grid")
+		.data(xValues)
+		.enter()
+		.insert("svg:line", "path")
+		.attr("class", "x-grid")
+		.attr("x1", function(d) {return chart.xFocus(d);})
+		.attr("x2", function(d) {return chart.xFocus(d);})
+		.attr("y1", this.y1(this.focusMinY))
+		.attr("y2", this.y1(this.focusMaxY));
+	this.focusArea.selectAll("text.x-grid")
+		.data(xValues)
+		.enter()
+		.insert("svg:text", "path")
+		.attr("class", "x-grid")
+		.style("font-family", "Verdana")
+		.style("font-size", "8px")
+		.style("text-anchor", "middle")
+		.attr("x", function(d) {return chart.xFocus(d);})
+		.attr("y", (this.h1 - p) + 10)
+		.text(function(d) {
+			if (!areSecondsGoodDivider) {
+				return timeFormat(new Date(d)) + "." + (d % 1000);
+			} else {
+				return timeFormat(new Date(d));
+			}
+		});
+	
+	//
+	
+	var horizontalGridMinSpace = 60;
+	var horizontalGridLineCount = Math.floor(this.allChartHeight / horizontalGridMinSpace) - 1 - 1; //substract 1 for the start and 1 for the rest which will be distributed
+	var yValues = new Array();
+	var yDifference = this.y1(this.focusMinY) - this.y1(this.focusMaxY);
+	var yIncrement = Math.floor(yDifference / horizontalGridLineCount);
+	var yRest = (yDifference) % horizontalGridLineCount;
+	var yRestAdding = Math.floor(yRest / horizontalGridLineCount);
+	for (var i = 1; i < horizontalGridLineCount; i++) {
+		yValues.push(this.y1(this.focusMinY) - (yIncrement * i) - (yRestAdding * i));
+	}
+	
+	this.focusArea.selectAll("line.y-grid")
+		.data(yValues)
+		.enter()
+		.insert("svg:line", "path")
+		.attr("class", "y-grid")
+		.attr("x1", chart.xFocus(chart.focusMinX))
+		.attr("x2", chart.xFocus(chart.focusMaxX))
+		.attr("y1", function(d) {return d;})
+		.attr("y2", function(d) {return d;});
+	this.focusArea.selectAll("text.y-grid")
+		.data(yValues)
+		.enter()
+		.insert("svg:text", "path")
+		.attr("class", "y-grid")
+		.style("font-family", "Verdana")
+		.style("font-size", "8px")
+		.style("text-anchor", "end")
+		.attr("x", 0)
+		.attr("y", function(d) {return d;})
+		.text(function(d) {
+			return chart.getYLabel(chart.y1.invert(d));
+		});	
+
 };
