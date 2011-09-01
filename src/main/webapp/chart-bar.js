@@ -1,7 +1,7 @@
 var minBarWidth = 12;
 var barSpaceWidth = 2;
 
-Chart.prototype.isBarTypeChart = function() {
+Chart.prototype.fctIsBarTypeChart = function() {
 	var metrics = this.chartMetrics;
 	var totalValuesCount = 0;
 	for (var i = 0; i < metrics.length; i++) {
@@ -42,6 +42,7 @@ Chart.prototype.drawBarChart = function() {
 	
 	var barWidth = this.chartWidth / data.length;
 	
+	this.focusArea.select("circle.value").remove();
 	this.focusArea.selectAll("path")
 		.style("fill", "none")
 		.style("stroke", "none");

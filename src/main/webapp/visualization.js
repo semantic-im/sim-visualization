@@ -359,7 +359,7 @@ function recursive(node, depth) {
 			cacheNodeChilds(childs_.node, childs_.childs);
 			for (var i = 0; i < childs_.childs.length; i++) {
 				var jsonNode = childs_.childs[i].node;
-				var child;
+				var child = null;
 				child = new Node(jsonNode);
 				if (!nodesHash.containsKey(child.name)) {
 					nodesHash.put(child.name, child);

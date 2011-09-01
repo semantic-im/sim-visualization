@@ -183,3 +183,20 @@ line.x-grid, line.y-grid {
   stroke: #ccc;
   shape-rendering: crispEdges;
 }
+
+.value-preview-content {
+	position: absolute;
+	border: 1px solid black;
+	background: WhiteSmoke;
+	/*overflow-y: auto;*/
+}
+
+.value-preview-transparent {
+    filter: alpha(opacity=80);
+    opacity: 0.8;
+}
+
+.value-preview-transparent-drag {
+    filter: alpha(opacity=30);
+    opacity: 0.3;
+}
