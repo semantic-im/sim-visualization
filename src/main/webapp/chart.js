@@ -72,7 +72,7 @@ function Metric() {
 		case TOTAL_SYSTEM_USED_MEMORY:
 		case TOTAL_SYSTEM_USED_SWAP:
 		//platform metrics
-		case PLATFORM_MEMORY_USAGE:
+		case PLATFORM_USED_MEMORY:
 			return Metric.KILOBYTES;
 		case IDLE_CPU_LOAD:
 		case IRQ_CPU_LOAD:
@@ -120,7 +120,7 @@ function Chart(id, width, height) {
 	this.allChartWidth = width;
 	this.allChartHeight = height;
 
-	this.leftSpaceWidth = 40;
+	this.leftSpaceWidth = 60;
 	this.rightSpaceWidth = 20;
 	this.topSpaceHeight = 10;
 	this.bottomSpaceHeight = 10;
@@ -560,11 +560,12 @@ Chart.prototype.processData = function(metric, data) {
 			value = +o.value;
 		}
 		o = data[i] = {
+			id: o.id,
 			x : +time.parse(o.timestamp),
 			y : value
 		};
 		newData.push(o);
-	}	
+	}
 	return newData;
 };
 
@@ -626,7 +627,7 @@ Chart.prototype.drawMetric = function(metric) {
 		focusPath.style("stroke-width", "1px");
 	}
 	
-	var contextPath = this.context.append("svg:path")
+	var contextPath = this.context.insert("svg:path", "rect")
 		.data([metric.data])
 		.attr("id", validID(metric.metric) + "Context")
 		.attr("pointer-events", "none");

@@ -28,8 +28,27 @@ function getChilds(node, callback, async) {
 function getMetricData(metric, callback) {
 	ajaxCall("metric", callback, metric, false);
 }
+
 function getMethods() {
 	var theResult = null;
 	ajaxCall("methods", function(result) {theResult = result;}, null, false);
 	return theResult;
+}
+
+function executeSparql(selectVariableNames, sparql, async, callback) {
+	var s = "[";
+	for (var i = 0; i < selectVariableNames.length; i++) {
+		if (i != 0) {
+			s = s + ",";
+		}
+		s = s + "'" + selectVariableNames[i] + "'";
+	}
+	s = s + "]";
+	if (async) {
+		ajaxCall("query", callback, "{select-variable-names:" + s + ", sparql:'" + sparql + "'}", async);
+	} else {
+		var theResult = null;
+		ajaxCall("query", function(result) {theResult = result;}, "{select-variable-names:" + s + ", sparql:'" + sparql + "'}", async);
+		return theResult;
+	}
 }

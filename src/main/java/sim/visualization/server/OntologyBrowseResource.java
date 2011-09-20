@@ -284,7 +284,8 @@ limit 10
 		JSONObject node = new JSONObject();
 		String name = subjectResource.toString();
 		node.put("name", name);
-		node.put("type", typeURI.equals(OWL.Class) ? "class" : typeURI.equals(OWL.ObjectProperty) ? "objectProperty" : typeURI.equals(OWL.DatatypeProperty) ? "datatypeProperty" : "entity");
+		node.put("type", typeURI.equals(OWL.Class) ? "class" : typeURI.equals(OWL.ObjectProperty) ? "objectProperty" : 
+			typeURI.equals(OWL.TransitiveProperty) ? "transitiveProperty" : typeURI.equals(OWL.DatatypeProperty) ? "datatypeProperty" : "entity");
 		String label = subjectResource.toString();
 		for (String namespacePrefix : namespaces.keySet()) {
 			String namespace = namespaces.get(namespacePrefix);

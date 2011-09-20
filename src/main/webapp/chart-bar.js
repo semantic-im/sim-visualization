@@ -27,6 +27,8 @@ Chart.prototype.drawBarChart = function() {
 			obj.x = metrics[i].focusData[j].x;
 			obj.y = metrics[i].focusData[j].y;
 			obj.fill = metrics[i].fill;
+			obj.id = metrics[i].focusData[j].id;
+			obj.metric = metrics[i].metric;
 			data.push(obj);
 		}
 	}
@@ -63,7 +65,11 @@ Chart.prototype.drawBarChart = function() {
 		.style("fill", function(d) {return d.fill;})
 		.style("fill-opacity", ".8")
 		.style("stroke", function(d) {return d.fill;})
-		.style("stroke-width", "1px");
+		.style("stroke-width", "1px")
+		.on("click", function(d) {
+			var contextGraph = new ContextGraph(d.metric, d.id);
+			contextGraph.start();
+		});
 
 	enterNodes.append("svg:text")
 		.attr("class", "bar")

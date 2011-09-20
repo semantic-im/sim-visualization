@@ -88,6 +88,7 @@ public class MetricResource extends ServerResource {
 
 			return rep;
 		} catch (Exception e) {
+			logger.error("exception", e);
 			getResponse().setStatus(Status.SERVER_ERROR_INTERNAL);
 		}
 		return null;
@@ -136,7 +137,7 @@ limit 10
 			JSONObject obj = new JSONObject();
 			obj.put("id", metricId);
 			obj.put("timestamp", timestamp.substring(0, timestamp.indexOf("^^")));
-			obj.put("value", value.substring(0, value.indexOf("^^")));
+			obj.put("value", value.indexOf("^^") != -1 ? value.substring(0, value.indexOf("^^")) : value);
 
 			jsonArray.put(obj);
 		}

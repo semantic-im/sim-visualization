@@ -275,7 +275,7 @@ function getFill(node) {
 		return "#9467bd";
 	} else if (node.type == "class") {
 		return "#ff7f0e";
-	} else if (node.type == "objectProperty") {
+	} else if (node.type == "objectProperty" || node.type == "transitiveProperty") {
 		return "#1f77b4";
 	} else if (node.type == "datatypeProperty") {
 		return "#2ca02c";
@@ -364,7 +364,7 @@ function recursive(node, depth) {
 				if (!nodesHash.containsKey(child.name)) {
 					nodesHash.put(child.name, child);
 				}
-				var child = nodesHash.get(child.name);
+				child = nodesHash.get(child.name);
 				if (depth < INITIAL_VISIBLE_DEPTH) {
 					recursive(child, depth + 1);
 				}
