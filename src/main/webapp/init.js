@@ -641,12 +641,12 @@ $(document).ready(function() {
 	chart2.legend.refreshLegend();
 	chart2.valuePreview.refreshValuePreview();
 	
-	setTimeout(refreshFct, 10000);
+	setTimeout(refreshFct, 5000);
 });
 
 var refreshFct = function() {
 	console.debug("ASdasd");
 	chart1.displayChart();
 	chart2.displayChart();	
-	setTimeout(refreshFct, 10000);
+	setTimeout(refreshFct, 5000);
 };
