@@ -8,7 +8,6 @@
     <welcome-file>default.html</welcome-file>
     <welcome-file>default.htm</welcome-file>
     <welcome-file>default.jsp</welcome-file>
-    <welcome-file>visualization.html</welcome-file>
   </welcome-file-list>
   <context-param>
     <param-name>org.restlet.clients</param-name>
