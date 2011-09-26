@@ -29,12 +29,6 @@ function getMetricData(metric, callback) {
 	ajaxCall("metric", callback, metric, false);
 }
 
-function getMethods() {
-	var theResult = null;
-	ajaxCall("methods", function(result) {theResult = result;}, null, false);
-	return theResult;
-}
-
 function executeSparql(selectVariableNames, sparql, async, callback) {
 	var s = "[";
 	for (var i = 0; i < selectVariableNames.length; i++) {

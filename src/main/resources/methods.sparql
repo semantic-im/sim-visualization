@@ -1,9 +1,0 @@
-PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>
-
-select distinct ?subject
-where {
-	{
-		?subject rdf:type :Method .
-	}
-}
-order by ?subject

@@ -1,5 +1,3 @@
-PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>
-
 select ?metricid ?timestamp ?value
 	where {
 		{

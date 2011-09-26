@@ -65,7 +65,8 @@ function Legend(chart) {
 		for (var i = 0; i < this.chart.chartMetrics.length; i++) {
 			var metric = chart.chartMetrics[i];
 			var div = legendContent.append("div")
-				.attr("id", validID(metric.metric) + "MetricLegend");
+				.attr("id", validID(metric.metric) + "MetricLegend")
+				.attr("title", metric.description);
 			div.append("canvas")
 				.attr("id", validID(metric.metric) + "LegendIcon")
 				.attr("width", "16")

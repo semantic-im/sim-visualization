@@ -64,7 +64,11 @@ public class ModelUtil {
 				break;
 			}
 			int end = start + parameterName.length();
-			query.replace(query.indexOf(parameterName), end, "<" + value + ">");
+			if (value.startsWith("http://")) {
+				query.replace(query.indexOf(parameterName), end, "<" + value + ">");
+			} else {
+				query.replace(query.indexOf(parameterName), end, value);
+			}
 		}
 	}
 

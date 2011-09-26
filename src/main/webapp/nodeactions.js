@@ -4,24 +4,7 @@ var ACTIONS_DELAY = 1000;
 var ACTIONS_HIDE_DELAY = 3000;
 
 var actionsNodeNames = [IO_READ, 
-                        IO_WRITE,
-                        IDLE_CPU_LOAD,
-                        IDLE_CPU_TIME,
-                        IRQ_CPU_LOAD,
-                        IRQ_CPU_TIME,
-                        SWAP_IN,
-                        SWAP_OUT,
-                        SYSTEM_CPU_LOAD,
-                        SYSTEM_CPU_TIME,
-                        SYSTEM_LOAD_AVERAGE,
-                        SYSTEM_OPEN_FILE_DESCRIPTOR_COUNT,
-                        TOTAL_SYSTEM_FREE_MEMORY,
-                        TOTAL_SYSTEM_USED_MEMORY,
-                        TOTAL_SYSTEM_USED_SWAP,
-                        USER_CPU_LOAD,
-                        USER_CPU_TIME,
-                        WAIT_CPU_LOAD,
-                        WAIT_CPU_TIME
+                        IO_WRITE
                         ];
 
 function actionsExistsForNode(node) {

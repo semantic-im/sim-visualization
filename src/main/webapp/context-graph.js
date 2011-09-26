@@ -28,18 +28,23 @@ function ContextGraph(metric, metricId) {
 		.attr("height", (clientHeight - (clientHeight/10)) + "px")
 		.style("border", "1px solid black")
 		.attr("pointer-events", "all")
+		.call(d3.behavior.zoom().on("zoom", redraw))
 		.append("svg:g");
+
+	function redraw() {
+		vis.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")");
+	}
 
 	this.start = function() {
 		//alert(metric + " - " + metricId);
 		
-		var sparql = "PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>\\n" +
-					 "select ?value" +
+		var sparql = "select ?id ?type " +
 					 "	where { " + 
-					 "		<" + this.metricId + "> :hasContext ?value " + 
+					 "		<" + this.metricId + "> :hasContext ?id . " + 
+					 "		?id rdf:type ?type . " +
 					 " 	} ";
 
-		executeSparql(["value"], sparql, true, this.loadContextCallback);
+		executeSparql(["id", "type"], sparql, true, this.loadContextCallback);
 		
 		$("#contextGraphDialog").dialog({
 			//title: this.metric + " - " + this.metricId + " Context",
@@ -137,13 +142,13 @@ function ContextGraph(metric, metricId) {
 	};
 
 	function nodeid(n) {
-		return n.name;
+		return n.id;
 	}
 
 	function linkid(l) {
 		var u = nodeid(l.source),
 			v = nodeid(l.target);
-		return u.name + v.name;
+		return u.id + v.id;
 	}
 
 	function transformDataToNodes(data, type) {
@@ -151,8 +156,13 @@ function ContextGraph(metric, metricId) {
 		for (var i = 0; i < data.length; i++) {
 			var obj = new Object();
 			obj.type = type;
-			obj.name = data[i].value;
-			obj.label = data[i].value;
+			obj.id = data[i].id; //the id in the html, must be unique
+			obj.name = data[i].id; //the name of the resoure (we might have several with same name) metric (ex. :Plugin)
+			if (data[i].type) { //the label to display on graph
+				obj.label = data[i].type; 
+			} else {
+				obj.label = data[i].id;
+			}
 			obj.childs = new Array();
 			nodes.push(obj);
 		}
@@ -169,6 +179,9 @@ function ContextGraph(metric, metricId) {
 			if (!cache) {
 				this.nodes.push(nodes[i]);
 			}
+			if (nodes[i].loaded) {
+				continue;
+			}
 			var childContextsNode = this.getChildContexts(nodes[i], cache);
 			if (!cache) {
 				this.putToGraph(nodes[i], childContextsNode);
@@ -181,6 +194,7 @@ function ContextGraph(metric, metricId) {
 			if (!cache) {
 				this.putToGraph(nodes[i], metricTagsNode);
 			}
+			nodes[i].loaded = true;
 		}
 		if (!cache) {
 			this.drawContextForce();
@@ -200,8 +214,11 @@ function ContextGraph(metric, metricId) {
 	
 	this.removeNodeFromGraph = function(node) {
 		this.removeLinksFromGraph(node);
+		if (node.expanded) {
+			node.expanded = false;
+		}
 		for (var i = 0; i < this.nodes.length; i++) {
-			if (this.nodes[i].name == node.name) {
+			if (this.nodes[i].id == node.id) {
 				this.nodes.splice(i, 1);
 				i--;
 			}
@@ -213,7 +230,7 @@ function ContextGraph(metric, metricId) {
 	
 	this.removeLinksFromGraph = function(sourceNode) {
 		for (var i = 0; i < this.links.length; i++) {
-			if (this.links[i].source.name == sourceNode.name) {
+			if (this.links[i].source.id == sourceNode.id) {
 				this.links.splice(i, 1);
 				i--;
 			}
@@ -221,31 +238,37 @@ function ContextGraph(metric, metricId) {
 	};
 	
 	this.getChildContexts = function(node, cache) {
-		var sparql = "PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>\\n" +
-					 "select ?value\\n" +
+		var sparql = "select ?id ?type\\n" +
 					 "	where { \\n" + 
-					 "		?value :hasParentContext " + node.label + " \\n"; 
-		if (node.parent) {
-			sparql = sparql + "FILTER regex(?value, " + node.parent.label + ") .\\n";
-		}
+					 "		?id :hasParentContext " + node.name + " . \\n" +
+					 "		?id rdf:type ?type . \\n";
 		sparql = sparql + " 	} ";
 			
 		var data = null;
 		if (cache) {
-			executeSparql(["value"], sparql, true, function(data) {contextGraph.treatChildContexts(node, data, cache);});
+			executeSparql(["id", "type"], sparql, true, function(data) {contextGraph.treatChildContexts(node, data, cache);});
 		} else {
-			data = executeSparql(["value"], sparql, false);
+			data = executeSparql(["id", "type"], sparql, false);
 			return this.treatChildContexts(node, data, cache);
 		}
 	};
 
 	this.treatChildContexts = function(node, data, cache) {
 		var nodes = transformDataToNodes(data, CONTEXT_TYPE);
+		if (node.parent) {
+			for (var i = 0; i < nodes.length; i++) {
+				if (nodes[i].name == node.parent.name) {
+					nodes.splice(i, 1);
+					break;
+				}
+			}
+		}
 		if (nodes.length == 0) {
 			return null;
 		}
 		var aNode = new Object();
 		aNode.name = node.name + "Childs";
+		aNode.id = aNode.name;
 		aNode.label = "Child contexts";
 		aNode.type = CONTEXT_GROUP_TYPE;
 		aNode.expanded = false;
@@ -262,31 +285,37 @@ function ContextGraph(metric, metricId) {
 	};
 	
 	this.getParentContexts = function(node, cache) {
-		var sparql = "PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>\\n" +
-					 "select ?value\\n" +
+		var sparql = "select ?id ?type \\n" +
 					 "	where { \\n" + 
-					 "		" + node.label + " :hasParentContext ?value .\\n";
-		if (node.parent) {
-			sparql = sparql + "FILTER regex(?value, " + node.parent.label + ") .\\n";
-		}
+					 "		" + node.name + " :hasParentContext ?id . \\n" +
+					 "		?id rdf:type ?type . \\n";
 		sparql = sparql + " 	} ";
-			
+		
 		var data = null;
 		if (cache) {
-			executeSparql(["value"], sparql, true, function(data) {contextGraph.treatParentContexts(node, data, cache);});		
+			executeSparql(["id", "type"], sparql, true, function(data) {contextGraph.treatParentContexts(node, data, cache);});		
 		} else {
-			data = executeSparql(["value"], sparql, false);
+			data = executeSparql(["id", "type"], sparql, false);
 			return this.treatParentContexts(node, data, cache);
 		};
 	};
 
 	this.treatParentContexts = function(node, data, cache) {
 		var nodes = transformDataToNodes(data, CONTEXT_TYPE);
+		if (node.parent) {
+			for (var i = 0; i < nodes.length; i++) {
+				if (nodes[i].name == node.parent.name) {
+					nodes.splice(i, 1);
+					break;
+				}
+			}
+		}
 		if (nodes.length == 0) {
 			return null;
 		}
 		var aNode = new Object();
 		aNode.name = node.name + "Parents";
+		aNode.id = aNode.name;
 		aNode.label = "Parent contexts";
 		aNode.type = CONTEXT_GROUP_TYPE;
 		aNode.expanded = false;
@@ -303,20 +332,20 @@ function ContextGraph(metric, metricId) {
 	};
 	
 	this.loadMetricTags = function(node, cache) {
-		var sparql = "PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>\\n"
-				+ "select distinct ?value"
+		var sparql = "select distinct ?id ?type "
 				+ "	where { "
-				+ "		?MetricInstance :hasContext " + node.label + " ."
-				+ "		?MetricInstance rdf:type ?type ."
-				+ "		?type :hasTag ?value ."
+				+ "		?MetricInstance :hasContext " + node.name + " ."
+				+ "		?MetricInstance rdf:type ?metricType ."
+				+ "		?metricType :hasTag ?id."
+				+ "		?id rdfs:label ?type ."
 				+ "	} "
-				+ "order by ?value";
+				+ "order by ?id";
 
 		var data = null;
 		if (cache) {
-			executeSparql([ "value" ], sparql, true, function(data) {contextGraph.treatMetricTags(node, data);});
+			executeSparql([ "id", "type" ], sparql, true, function(data) {contextGraph.treatMetricTags(node, data);});
 		} else {
-			data = executeSparql([ "value" ], sparql, false);
+			data = executeSparql([ "id", "type" ], sparql, false);
 			return this.treatMetricTags(node, data);
 		}
 	};
@@ -328,13 +357,14 @@ function ContextGraph(metric, metricId) {
 		}
 		var aNode = new Object();
 		aNode.name = node.name + "MetricTags";
+		aNode.id = aNode.name;
 		aNode.label = "Metrics";
 		aNode.type = TAG_GROUP_TYPE;
 		aNode.expanded = false;
 		aNode.childs = new Array();
 		for ( var i = 0; i < nodes.length; i++) {
 			nodes[i].parent = node;
-			nodes[i].name = nodes[i].parent.name + nodes[i].name;
+			nodes[i].id = nodes[i].parent.name + nodes[i].name;
 			nodes[i].expanded = false;
 			aNode.childs.push(nodes[i]);
 		}
@@ -343,16 +373,18 @@ function ContextGraph(metric, metricId) {
 	};
 	
 	this.loadMetricTypes = function(contextNode, tagNode) {
-		var sparql = "PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>\\n"
-				+ "select distinct ?value"
+		if (tagNode.loaded) {
+			return;
+		}
+		var sparql = "select distinct ?id"
 				+ "	where { "
-				+ "		?MetricInstance :hasContext " + contextNode.label + " ."
-				+ "		?MetricInstance rdf:type ?value ."
-				+ "		?value :hasTag " + tagNode.label + " ."	 //FIXME here is the label cause the name contains also the id of the context
+				+ "		?MetricInstance :hasContext " + contextNode.name + " ."
+				+ "		?MetricInstance rdf:type ?id ."
+				+ "		?id :hasTag " + tagNode.name + " ."	 //FIXME here is the label cause the name contains also the id of the context
 				+ "	} "
-				+ "order by ?value";
+				+ "order by ?id";
 
-		executeSparql([ "value" ], sparql, true, function(data) {contextGraph.treatMetricTypes(contextNode, tagNode, data);});
+		executeSparql([ "id" ], sparql, true, function(data) {contextGraph.treatMetricTypes(contextNode, tagNode, data);});
 	};
 	
 	this.treatMetricTypes = function(contextNode, tagNode, data) {
@@ -360,24 +392,27 @@ function ContextGraph(metric, metricId) {
 		for (var i = 0; i < nodes.length; i++) {
 			nodes[i].parent = contextNode;
 			nodes[i].label = nodes[i].name;
-			nodes[i].name = nodes[i].parent.name + nodes[i].name;
+			nodes[i].id = nodes[i].parent.name + nodes[i].name;
 			nodes[i].type = METRIC_TYPE;
 			nodes[i].childs = new Array();
 			tagNode.childs.push(nodes[i]);
 		};
+		tagNode.loaded = true;
 		//tagNode.expanded =  false;
 		//displayExpandSign(tagNode.name);
 	};
 
 	this.loadMetricInstances = function(contextNode, metricNode) {
-		var sparql = "PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>\\n"
-				+ "select ?time ?value ?unit"
+		if (metricNode.loaded) {
+			return;
+		}
+		var sparql = "select ?time ?value ?unit"
 				+ "	where { "
-				+ "		?MetricInstance :hasContext " + contextNode.label + " .\\n"
-				+ "		?MetricInstance rdf:type " + metricNode.label + " .\\n"
+				+ "		?MetricInstance :hasContext " + contextNode.name + " .\\n"
+				+ "		?MetricInstance rdf:type " + metricNode.name + " .\\n"
 				+ "		?MetricInstance :hasDataValue ?value .\\n"
 				+ "		?MetricInstance :hasTimeStamp ?time .\\n"
-				+ " " + metricNode.label + " :hasMeasurementUnit ?unit .\\n"
+				+ " " + metricNode.name + " :hasMeasurementUnit ?unit .\\n"
 				+ "	} \\n"
 				+ "order by ?time ";
 
@@ -393,6 +428,7 @@ function ContextGraph(metric, metricId) {
 			obj.unit = data[i].unit;
 			metricNode.instances.push(obj);
 		}
+		metricNode.loaded = true;
 	};
 
 	function getColor(d) {
@@ -424,7 +460,9 @@ function ContextGraph(metric, metricId) {
 				if (node.type == CONTEXT_GROUP_TYPE) {
 					for (var j = 0; j < node.childs[i].childs.length; j++) {
 						this.putToGraph(node.childs[i], node.childs[i].childs[j]);
-						this.loadContext(node.childs[i].childs[j].childs, true);
+						if (node.childs[i].childs[j].type == CONTEXT_GROUP_TYPE) {
+							this.loadContext(node.childs[i].childs[j].childs, true);
+						}
 					}
 				} else if (node.type == TAG_GROUP_TYPE) {
 					this.loadMetricTypes(node.childs[i].parent, node.childs[i]);

@@ -4,3 +4,5 @@ PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
 PREFIX owl:<http://www.w3.org/2002/07/owl#>
 PREFIX xml:<http://www.w3.org/XML/1998/namespace>
 PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
+PREFIX dc:<http://purl.org/dc/elements/1.1/>
+PREFIX :<http://www.larkc.eu/ontologies/IMOntology.rdf#>

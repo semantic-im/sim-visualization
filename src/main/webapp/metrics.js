@@ -5,11 +5,18 @@ var PLATFORM_METRIC_ICON_COLOR = "#8c564b",
 	COMPOUND_METRIC_ICON_COLOR = "#17becf",
 	ATOMIC_METRIC_ICON_COLOR = "#2ca02c";
 
-var methods = getMethods();
-var selectedMethodMetric, selectedMethodMetricLabel;
+var selectedMethodMetric;
 var grid = "r1x1";
 var chartColors = d3.scale.category10();
 var chart1, chart2, chart3, chart4;
+
+var systemMetrics = getMetrics(":SystemMetric");
+var methodMetrics = getMetrics(":MethodMetric");
+var methods = getMethods();
+var platformMetrics = getMetrics(":PlatformMetric");
+var atomicPluginMetrics = getMetrics(":PluginMetric");
+var atomicQueryMetrics = getMetrics(":QueryMetric");
+var atomicWorkflowMetrics = getMetrics(":WorkflowMetric");
 
 function drawCloseIcon() {
 	var context = $('#closeIcon')[0].getContext('2d');
@@ -35,7 +42,7 @@ function drawCloseIcon() {
 $(document).ready(function() {
 	var metricsSelectorHeight = (clientHeight - clientHeight * 0.1);
 	var metricsSelectorPaddingHeight = 10;
-	var metricsSelectorWidth = 450;
+	var metricsSelectorWidth = 360;
 	var metricsSelector = d3.select("#metrics-selector")
 		.style("height", metricsSelectorHeight + "px")
 		.style("width", metricsSelectorWidth + "px")
@@ -65,7 +72,7 @@ $(document).ready(function() {
 	
 	//callback function to bring a hidden box back
 	function metricsSelectorToggleHideCallback() {
-		d3.select("#metrics-selector").style("left", "-440px");
+		d3.select("#metrics-selector").style("left", "-350px");
 		$('#metrics-selector').show().fadeIn();
 	};
 	
@@ -73,10 +80,10 @@ $(document).ready(function() {
 	$("#metrics-selector-toggle").click(function () {
 		if (!hidden) {
 			d3.select("#methods").style("display", "none");
-			$("#metrics-selector").hide("slide", { direction: "left", distance: 440 }, 1000, metricsSelectorToggleHideCallback);
+			$("#metrics-selector").hide("slide", { direction: "left", distance: 350 }, 1000, metricsSelectorToggleHideCallback);
 		} else {
 			d3.select("#metrics-selector").style("left", "0px");
-			$("#metrics-selector").show("slide", { direction: "left", distance: 440 }, 1000);
+			$("#metrics-selector").show("slide", { direction: "left", distance: 350 }, 1000);
 		}
 		hidden = !hidden;
 	});
@@ -185,11 +192,12 @@ $(document).ready(function() {
 		.style("display", "inline-block");
 		//.style("float", "left");
 	for (var i = 0; i < systemMetrics.length; i++) {
-		var systemMetricId = validID(systemMetrics[i]);
+		var systemMetricId = validID(systemMetrics[i].id);
 		var div = systemMetricsDiv.append("div")
 			.attr("id",  systemMetricId + "Container")
 			.attr("data", i)
-			.attr("class",  "metric-container");
+			.attr("class",  "metric-container")
+			.attr("title", systemMetrics[i].description);
 		div.append("canvas")
 			.attr("id", systemMetricId + "Icon")
 			.attr("width", "12")
@@ -197,7 +205,7 @@ $(document).ready(function() {
 			.attr("class", "metric-icon");
 		div.append("span")
 			.attr("class", "metric-label")
-			.text(systemMetricLabels[i]);
+			.text(systemMetrics[i].label);
 		
 		drawCircle($('#' + systemMetricId + 'Icon')[0], 6, "#ff7f0e");
 		
@@ -216,11 +224,12 @@ $(document).ready(function() {
 		.style("vertical-align", "top");
 		//.style("float", "right");
 	for (var i = 0; i < methodMetrics.length; i++) {
-		var methodMetricId = validID(methodMetrics[i]);
+		var methodMetricId = validID(methodMetrics[i].id);
 		var div = methodMetricsDiv.append("div")
 			.attr("id",  methodMetricId + "Container")
 			.attr("data",  i)
-			.attr("class",  "metric-container");
+			.attr("class",  "metric-container")
+			.attr("title", methodMetrics[i].description);
 		div.append("canvas")
 			.attr("id", methodMetricId + "Icon")
 			.attr("width", "12")
@@ -230,7 +239,7 @@ $(document).ready(function() {
 		div.append("span")
 			.attr("class", "metric-label")
 			.style("pointer-events", "none")
-			.text(methodMetricLabels[i]);
+			.text(methodMetrics[i].label);
 		div.append("canvas")
 			.attr("id", methodMetricId + "Icon1")
 			.attr("width", "16")
@@ -272,7 +281,7 @@ $(document).ready(function() {
 		.style("height", "280px")
 		.style("overflow-y", "scroll");
 	for (var i = 0; i < methods.length; i++) {
-		var origMethodId = methods[i].substring(methods[i].lastIndexOf("#") + 1, methods[i].length);
+		var origMethodId = methods[i].id.substring(methods[i].id.lastIndexOf(":") + 1, methods[i].id.length);
 		methodId = validID(origMethodId);
 		var div = containerMethodsDiv.append("div")
 			.attr("id",  methodId + "Container")
@@ -303,11 +312,12 @@ $(document).ready(function() {
 		.style("display", "inline-block");
 		//.style("float", "right");
 	for (var i = 0; i < platformMetrics.length; i++) {
-		var platformMetricId = validID(platformMetrics[i]);
+		var platformMetricId = validID(platformMetrics[i].id);
 		var div = platformMetricsDiv.append("div")
 			.attr("id",  platformMetricId + "Container")
 			.attr("data", systemMetrics.length + methods.length + i)
-			.attr("class",  "metric-container");
+			.attr("class",  "metric-container")
+			.attr("title", platformMetrics[i].description);
 		div.append("canvas")
 			.attr("id", platformMetricId + "Icon")
 			.attr("width", "12")
@@ -317,7 +327,7 @@ $(document).ready(function() {
 		div.append("span")
 			.attr("class", "metric-label")
 			.style("pointer-events", "none")
-			.text(platformMetricLabels[i]);
+			.text(platformMetrics[i].label);
 
 		drawCircle($('#' + platformMetricId + 'Icon')[0], 6, PLATFORM_METRIC_ICON_COLOR);
 		
@@ -330,6 +340,7 @@ $(document).ready(function() {
 	//~~
 
 	//COMPOUND METRICS
+	/*
 	var compoundMetricsSelector = d3.select("#compound-metrics-selector");
 	var compoundMetricsDiv = compoundMetricsSelector.append("div")
 		.style("display", "inline-block");
@@ -359,21 +370,23 @@ $(document).ready(function() {
 			helper: 'clone', 
 			opacity: 0.7});
 	}
+	*/
 	//~~
 
-	//ATOMIC METRICS
-	var atomicMetricsSelector = d3.select("#atomic-metrics-selector");
-	var atomicMetricsDiv = atomicMetricsSelector.append("div")
+	//PLUGIN ATOMIC METRICS
+	var atomicPluginMetricsSelector = d3.select("#atomic-plugin-metrics-selector");
+	var atomicPluginMetricsDiv = atomicPluginMetricsSelector.append("div")
 		.style("display", "inline-block");
 		//.style("float", "right");
-	for (var i = 0; i < atomicMetrics.length; i++) {
-		var atomicMetricId = validID(atomicMetrics[i]);
-		var div = atomicMetricsDiv.append("div")
-			.attr("id",  atomicMetricId + "Container")
-			.attr("data", systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length + i)
-			.attr("class",  "metric-container");
+	for (var i = 0; i < atomicPluginMetrics.length; i++) {
+		var atomicPluginMetricId = validID(atomicPluginMetrics[i].id);
+		var div = atomicPluginMetricsDiv.append("div")
+			.attr("id",  atomicPluginMetricId + "Container")
+			.attr("data", systemMetrics.length + methods.length + platformMetrics.length + i)
+			.attr("class",  "metric-container")
+			.attr("title", atomicPluginMetrics[i].description);
 		div.append("canvas")
-			.attr("id", atomicMetricId + "Icon")
+			.attr("id", atomicPluginMetricId + "Icon")
 			.attr("width", "12")
 			.attr("height", "12")
 			.style("pointer-events", "none")
@@ -381,11 +394,77 @@ $(document).ready(function() {
 		div.append("span")
 			.attr("class", "metric-label")
 			.style("pointer-events", "none")
-			.text(atomicMetricLabels[i]);
+			.text(atomicPluginMetrics[i].label);
 
-		drawCircle($('#' + atomicMetricId + 'Icon')[0], 6, ATOMIC_METRIC_ICON_COLOR);
+		drawCircle($('#' + atomicPluginMetricId + 'Icon')[0], 6, ATOMIC_METRIC_ICON_COLOR);
 		
-		$('#' + atomicMetricId + 'Container').draggable({
+		$('#' + atomicPluginMetricId + 'Container').draggable({
+			appendTo: '#for-dragging',
+			scroll: false,
+			helper: 'clone', 
+			opacity: 0.7});
+	}
+	//~~
+
+	//QUERY ATOMIC METRICS
+	var atomicQueryMetricsSelector = d3.select("#atomic-query-metrics-selector");
+	var atomicQueryMetricsDiv = atomicQueryMetricsSelector.append("div")
+		.style("display", "inline-block");
+		//.style("float", "right");
+	for (var i = 0; i < atomicQueryMetrics.length; i++) {
+		var atomicQueryMetricId = validID(atomicQueryMetrics[i].id);
+		var div = atomicQueryMetricsDiv.append("div")
+			.attr("id",  atomicQueryMetricId + "Container")
+			.attr("data", systemMetrics.length + methods.length + platformMetrics.length + atomicPluginMetrics.length + i)
+			.attr("class",  "metric-container")
+			.attr("title", atomicQueryMetrics[i].description);
+		div.append("canvas")
+			.attr("id", atomicQueryMetricId + "Icon")
+			.attr("width", "12")
+			.attr("height", "12")
+			.style("pointer-events", "none")
+			.attr("class", "metric-icon");
+		div.append("span")
+			.attr("class", "metric-label")
+			.style("pointer-events", "none")
+			.text(atomicQueryMetrics[i].label);
+
+		drawCircle($('#' + atomicQueryMetricId + 'Icon')[0], 6, ATOMIC_METRIC_ICON_COLOR);
+		
+		$('#' + atomicQueryMetricId + 'Container').draggable({
+			appendTo: '#for-dragging',
+			scroll: false,
+			helper: 'clone', 
+			opacity: 0.7});
+	}
+	//~~
+
+	//WORKFLOW ATOMIC METRICS
+	var atomicWorkflowMetricsSelector = d3.select("#atomic-workflow-metrics-selector");
+	var atomicWorkflowMetricsDiv = atomicWorkflowMetricsSelector.append("div")
+		.style("display", "inline-block");
+		//.style("float", "right");
+	for (var i = 0; i < atomicWorkflowMetrics.length; i++) {
+		var atomicWorkflowMetricId = validID(atomicWorkflowMetrics[i].id);
+		var div = atomicWorkflowMetricsDiv.append("div")
+			.attr("id",  atomicWorkflowMetricId + "Container")
+			.attr("data", systemMetrics.length + methods.length + platformMetrics.length + atomicPluginMetrics.length + atomicQueryMetrics.length + i)
+			.attr("class",  "metric-container")
+			.attr("title", atomicWorkflowMetrics[i].description);
+		div.append("canvas")
+			.attr("id", atomicWorkflowMetricId + "Icon")
+			.attr("width", "12")
+			.attr("height", "12")
+			.style("pointer-events", "none")
+			.attr("class", "metric-icon");
+		div.append("span")
+			.attr("class", "metric-label")
+			.style("pointer-events", "none")
+			.text(atomicWorkflowMetrics[i].label);
+
+		drawCircle($('#' + atomicWorkflowMetricId + 'Icon')[0], 6, ATOMIC_METRIC_ICON_COLOR);
+		
+		$('#' + atomicWorkflowMetricId + 'Container').draggable({
 			appendTo: '#for-dragging',
 			scroll: false,
 			helper: 'clone', 
@@ -409,7 +488,6 @@ $(document).ready(function() {
 function displayMethods(event) {
 	var dataIndex = d3.select("#" + event.target.id).attr("data");
 	selectedMethodMetric = methodMetrics[dataIndex];
-	selectedMethodMetricLabel = methodMetricLabels[dataIndex];
 	
 	var methodsDiv = d3.select("#methods");
 	methodsDiv.style("display", "inline-block");
@@ -417,7 +495,7 @@ function displayMethods(event) {
 	methodsDiv.style("left", event.pageX + "px");
 	
 	var methodsHeaderLabelDiv = d3.select("#methodsHeaderLabel");
-	methodsHeaderLabelDiv.text(methodMetricLabels[dataIndex]);
+	methodsHeaderLabelDiv.text(methodMetrics[dataIndex].label);
 };
 
 function closeMethods() {
@@ -473,21 +551,32 @@ function createMetric(chart, dataIndex) {
 	var metric = null;
 	if (dataIndex < systemMetrics.length) {
 		index = dataIndex;
-		metric = chart.createMetric(systemMetrics[index], systemMetricLabels[index]);
+		//metric = chart.createMetric(systemMetrics[index], systemMetricLabels[index]);
+		metric = systemMetrics[index];
 	} else if (dataIndex < systemMetrics.length + methods.length ) {
 		index = dataIndex - systemMetrics.length;
-		metric = chart.createMetric(selectedMethodMetric, selectedMethodMetricLabel, methods[index], methods[index].substring(methods[index].lastIndexOf("#") + 1, methods[index].length));
+		//metric = chart.createMetric(selectedMethodMetric, selectedMethodMetricLabel, methods[index], methods[index].substring(methods[index].lastIndexOf("#") + 1, methods[index].length));
+		selectedMethodMetric.method = methods[index];
+		metric = selectedMethodMetric;
+		
 	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length) {
 		index = dataIndex - systemMetrics.length - methods.length;
-		metric = chart.createMetric(platformMetrics[index], platformMetricLabels[index]);
-	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length) {
+		//metric = chart.createMetric(platformMetrics[index], platformMetricLabels[index]);
+		metric = platformMetrics[index];
+	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + atomicPluginMetrics.length) {
 		index = dataIndex - systemMetrics.length - methods.length - platformMetrics.length;
-		metric = chart.createMetric(compoundMetrics[index], compoundMetricLabels[index]);
-	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + compoundMetrics.length + atomicMetrics.length) {
-		index = dataIndex - systemMetrics.length - methods.length - platformMetrics.length - compoundMetrics.length;
-		metric = chart.createMetric(atomicMetrics[index], atomicMetricLabels[index]);
+		//metric = chart.createMetric(atomicMetrics[index], atomicMetricLabels[index]);
+		metric = atomicPluginMetrics[index];
+	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + atomicPluginMetrics.length + atomicQueryMetrics.length) {
+		index = dataIndex - systemMetrics.length - methods.length - platformMetrics.length - atomicPluginMetrics.length;
+		//metric = chart.createMetric(atomicMetrics[index], atomicMetricLabels[index]);
+		metric = atomicQueryMetrics[index];
+	} else if (dataIndex < systemMetrics.length + methods.length + platformMetrics.length + atomicPluginMetrics.length + atomicQueryMetrics.length + atomicWorkflowMetrics.length) {
+		index = dataIndex - systemMetrics.length - methods.length - platformMetrics.length - atomicPluginMetrics.length - atomicQueryMetrics.length;
+		//metric = chart.createMetric(atomicMetrics[index], atomicMetricLabels[index]);
+		metric = atomicWorkflowMetrics[index];
 	}
-	return metric;
+	return new Metric(metric);
 }
 
 function setDroppable(chart) {
@@ -661,4 +750,29 @@ function metricsSelectorToggleMouseover() {
 function metricsSelectorToggleMouseout() {
 	d3.select("#metrics-selector-toggle")
 		.classed("mouseover", false);
+}
+
+function getMetrics(superType) {
+	var sparql = "select ?id ?label ?description ?unit ?unitLabel \\n"
+			+ "  where { \\n"
+			+ "    ?id rdfs:subClassOf " + superType + " . \\n"
+			+ "    ?id rdfs:label ?label . \\n"
+			+ "    ?id dc:description ?description . \\n"
+			+ "    ?id :hasMeasurementUnit ?unit . \\n"
+			+ "    ?unit rdfs:label ?unitLabel . \\n"
+			+ "  } \\n"
+			+ "order by ?label ";
+
+	return executeSparql([ "id", "label", "description", "unit" ], sparql, false);
+}
+
+function getMethods() {
+	var sparql = 
+		"  select distinct ?id \\n"
+		+ "  where { \\n"
+		+ "    ?id rdf:type :Method . \\n"
+		+ "  } \\n"
+		+ "order by ?id ";
+
+	return executeSparql([ "id" ], sparql, false);	
 }

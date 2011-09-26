@@ -1,3 +1,12 @@
+var IO_READ = ':IORead',
+	IO_WRITE = ':IOWrite',
+	IDLE_CPU_TIME = ':IdleCPUTime',
+	USER_CPU_TIME = ':UserCPUTime',
+	WAIT_CPU_TIME = ':WaitCPUTime',
+	SYSTEM_CPU_TIME = ':SystemCPUTime',
+	PLATFORM_UPTIME = ':PlatformUptime';
+
+/*
 var IO_READ = 'http://www.larkc.eu/ontologies/IMOntology.rdf#IORead',
 	IO_WRITE = 'http://www.larkc.eu/ontologies/IMOntology.rdf#IOWrite',
 	IDLE_CPU_LOAD = 'http://www.larkc.eu/ontologies/IMOntology.rdf#IdleCPULoad',
@@ -184,7 +193,8 @@ var PLUGIN_ALLOCATED_MEMORY_AFTER = 'http://www.larkc.eu/ontologies/IMOntology.r
 	WORKFLOW_UNALLOCATED_MEMORY_BEFORE = 'http://www.larkc.eu/ontologies/IMOntology.rdf#WorkflowUnallocatedMemoryBefore',
 	WORKFLOW_USED_MEMORY_AFTER = 'http://www.larkc.eu/ontologies/IMOntology.rdf#WorkflowUsedMemoryAfter',
 	WORKFLOW_USED_MEMORY_BEFORE = 'http://www.larkc.eu/ontologies/IMOntology.rdf#WorkflowUSedMemoryBEfore';
-	
+*/
+/*
 var systemMetrics = [IO_READ, 
                      IO_WRITE,
                      IDLE_CPU_LOAD,
@@ -214,6 +224,7 @@ var systemMetrics = [IO_READ,
                      WAIT_CPU_LOAD,
                      WAIT_CPU_TIME
                     ];
+
 systemMetricLabels = ['IO Read',
                       'IO Write',
                       'Idle CPU Load',
@@ -242,7 +253,8 @@ systemMetricLabels = ['IO Read',
                       'User CPU Time',
                       'Wait CPU Load',
                       'Wait CPU Time'];
-
+*/
+/*
 var methodMetrics = [ ALLOCATED_MEMORY_AFTER,
                   	ALLOCATED_MEMORY_BEFORE,
                 	FREE_MEMORY_AFTER,
@@ -283,7 +295,8 @@ var methodMetrics = [ ALLOCATED_MEMORY_AFTER,
 	                      'Used Memory After',
 	                      'Used Memory Before',
 	                      'Wallclock Time'];
-
+*/
+/*
 var platformMetrics = [ PLATFORM_ALLOCATED_MEMORY,
                     	PLATFORM_AVG_CPU_USAGE,
                     	PLATFORM_CPU_TIME,
@@ -316,7 +329,9 @@ var platformMetrics = [ PLATFORM_ALLOCATED_MEMORY,
                             'Platform Unallocated Memory',
                             'Platform Uptime', 
                             'Platform Mem. Usage'];
+*/
 
+/*
 var compoundMetrics = [ PLUGIN_INSTANCE_CREATION,
                         PLUGIN_METHOD_INVOCATION,
                         QUERIES_PER_TIME_INTERVAL,
@@ -337,7 +352,8 @@ var compoundMetrics = [ PLUGIN_INSTANCE_CREATION,
                         	'Workflow Avg Nodes',
                         	'Workflow Avg Threads',
                         	'Workflows'];
-
+*/
+/*
 var atomicMetrics = [PLUGIN_ALLOCATED_MEMORY_AFTER,
                  	 PLUGIN_ALLOCATED_MEMORY_BEFORE,
                 	 PLUGIN_BEGIN_EXECUTION_TIME,
@@ -555,6 +571,7 @@ var atomicMetrics = [PLUGIN_ALLOCATED_MEMORY_AFTER,
                       	  'Workflow Unalloc. Memory Before',
                       	  'Workflow Used Memory After',
                       	  'Workflow Used Memory Before'];
+*/
 
 var pxRegExp = new RegExp("([0-9]*)px", "i");
 

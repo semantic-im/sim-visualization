@@ -7,17 +7,29 @@ Metric.VALUES_TYPE = "VALUES_TYPE";
 Metric.INCREMENT_TYPE = "INCREMENT_TYPE";
 
 //measurement units
-Metric.KILOBYTES = "KILOBYTES";
-Metric.PERCENTAGE = "PERCENTAGE";
-Metric.TIMESTAMP = "TIMESTAMP";
-Metric.NUMERIC = "NUMERIC";
+Metric.KILOBYTE = ":Kilobyte";
+Metric.BYTE = ":Byte";
+Metric.PERCENTAGE = ":Percent";
+Metric.SECOND = ":Second";
+Metric.MILLISECOND = ":Millisecond";
+Metric.TIMESTAMP = ":TimePoint";
+Metric.COUNTER = ":Counter";
+Metric.NUMERIC = ":NumericValue";
 
-function Metric() {
+function Metric(model) {
 
-	this.metric = null;
-	this.metricLabel = null;
+	this.metric = model.id;
+	this.metricLabel = model.label;
 	this.method = null;
 	this.methodLabel = null;
+	if (model.method) {
+		this.method = model.method.id;
+		this.methodLabel = model.method.label;
+	}
+	
+	this.description = model.description;
+	this.unit = model.unit;
+	this.unitLabel = model.unitLabel;
 	
 	this.fill = null;
 	
@@ -28,8 +40,10 @@ function Metric() {
 		switch (this.metric) {
 		case IO_READ:
 		case IO_WRITE:
+		case IDLE_CPU_TIME:
 		case USER_CPU_TIME:
 		case WAIT_CPU_TIME:
+		case SYSTEM_CPU_TIME:
 		case PLATFORM_UPTIME:
 			return Metric.INCREMENT_TYPE;
 		default:
@@ -38,8 +52,16 @@ function Metric() {
 	};
 	
 	this.getFormattedValue = function(value) {
-		switch (this.measurementUnit()) {
-		case Metric.KILOBYTES:
+		switch (this.unit) {
+		case Metric.KILOBYTE:
+			if (value > 1024 * 1024) {
+				return d3.format(".2f")(value/1024/1024) + "Gb";
+			} else if (value > 1024) {
+				return d3.format(".2f")(value/1024) + "Mb";
+			} else {
+				return Math.floor(value) + "Kb";
+			}
+		case Metric.BYTE:
 			if (value > 1024 * 1024) {
 				return d3.format(".2f")(value/1024/1024) + "M";
 			} else if (value > 1024) {
@@ -49,6 +71,15 @@ function Metric() {
 			}
 		case Metric.PERCENTAGE:
 			return d3.format(".2%")(value);
+		case Metric.SECOND:
+			if (value > 60 * 60) {
+				return Math.floor(value / (60 * 60)) + "h" + Math.floor((value % (60 * 60)) / 60) + "m" + Math.floor(value % 60) + "s";
+			} else if (value > 60) {
+				return Math.floor(value / 60) + "m" + Math.floor(value % 60) + "s";
+			} else {
+				return d3.format(".2f")(value) + "s";
+			}
+		case Metric.MILLISECOND:
 		case Metric.TIMESTAMP:
 			if (value > 1000) {
 				return d3.format(".2f")(value / 1000) + "s";
@@ -57,11 +88,14 @@ function Metric() {
 			} else {
 				return d3.format(".2f")(value) + "ms";
 			}
+		case Metric.COUNTER:
+			return Math.round(value);
 		default:
 			return Math.floor(value);
 		}
 	};
 	
+	/*
 	this.measurementUnit = function () {
 		switch (this.metric) {
 		case IO_READ:
@@ -108,7 +142,7 @@ function Metric() {
 			return Metric.NUMERIC;
 		}
 	};
-	
+	*/
 }
 
 function Chart(id, width, height) {
@@ -464,6 +498,7 @@ Chart.prototype.createMetricJsonParameter = function(metric) {
 	return result + "}";
 };
 
+/*
 Chart.prototype.createMetric = function (aMetric, aMetricLabel, aMethod, aMethodLabel) {
 	var metric = new Metric();
 	metric.metric = aMetric;
@@ -472,12 +507,13 @@ Chart.prototype.createMetric = function (aMetric, aMetricLabel, aMethod, aMethod
 	metric.methodLabel = aMethodLabel;
 	return metric;
 };
+*/
 
 Chart.prototype.acceptMetric = function (metric) {
 	if (this.chartMetrics.length == 0) {
 		return  true;
 	}
-	return metric.measurementUnit() == this.chartMetrics[0].measurementUnit(); 
+	return metric.unit == this.chartMetrics[0].unit; 
 };
 
 Chart.prototype.addMetricToChart = function(metric) {
@@ -808,11 +844,11 @@ Chart.prototype.drawGrid = function() {
 	} else if (!areHoursGoodDivider) {
 		increment = Math.floor(differenceTimeMinutes / verticalGridLineCount) * 1000 * 60;
 		rest = (differenceTimeMinutes % verticalGridLineCount) * 1000 * 60;
-		this.xScaleTimeFormat = d3.time.format("%H:%M");
+		this.xScaleTimeFormat = d3.time.format("%M");
 	} else if (!areDaysGoodDivider) {
 		increment = Math.floor(differenceTimeHours / verticalGridLineCount) * 1000 * 60 * 60;
 		rest = (differenceTimeHours % verticalGridLineCount) * 1000 * 60 * 60;
-		this.xScaleTimeFormat = d3.time.format("%a %H");
+		this.xScaleTimeFormat = d3.time.format("%H:%M");
 	} else if (!areWeeksGoodDivider) {
 		increment = Math.floor(differenceTimeDays / verticalGridLineCount) * 1000 * 60 * 60 * 24;
 		rest = (differenceTimeDays % verticalGridLineCount) * 1000 * 60 * 60 * 24;
