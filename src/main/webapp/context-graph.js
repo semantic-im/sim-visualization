@@ -5,6 +5,8 @@ function ContextGraph(metric, metricId) {
 	var CONTEXT_GROUP_TYPE = "context_group";
 	var TAG_GROUP_TYPE = "tag_group";
 	var TAG_TYPE = "tag";
+	var METHOD_METRICS_TYPE = "method_metrics_type";
+	var ATOMIC_METRICS_TYPE = "atomic_metrics_type";
 	var METRIC_TYPE = "metric";
 	
 	this.metric = metric;
@@ -376,47 +378,78 @@ function ContextGraph(metric, metricId) {
 		if (tagNode.loaded) {
 			return;
 		}
-		var sparql = "select distinct ?id"
+		var sparql = "select distinct ?id ?type "
 				+ "	where { "
 				+ "		?MetricInstance :hasContext " + contextNode.name + " ."
 				+ "		?MetricInstance rdf:type ?id ."
-				+ "		?id :hasTag " + tagNode.name + " ."	 //FIXME here is the label cause the name contains also the id of the context
+				+ "		?id :hasTag " + tagNode.name + " ."
+				+ "		?id rdfs:subClassOf ?type ."
 				+ "	} "
 				+ "order by ?id";
 
-		executeSparql([ "id" ], sparql, true, function(data) {contextGraph.treatMetricTypes(contextNode, tagNode, data);});
+		executeSparql([ "id", "type" ], sparql, true, function(data) {contextGraph.treatMetricTypes(contextNode, tagNode, data);}); //use variable type just to be able to use transformDataToNodes method 
 	};
 	
 	this.treatMetricTypes = function(contextNode, tagNode, data) {
 		var nodes = transformDataToNodes(data);
+		var methodMetricNode = null, atomicMetricNode = null;
 		for (var i = 0; i < nodes.length; i++) {
+			var methodMetricType = (nodes[i].label == ":MethodMetric"); //FIXME remove hard-code, use the label because there is put the supra class after using the method transformDataToNodes
 			nodes[i].parent = contextNode;
 			nodes[i].label = nodes[i].name;
 			nodes[i].id = nodes[i].parent.name + nodes[i].name;
 			nodes[i].type = METRIC_TYPE;
 			nodes[i].childs = new Array();
-			tagNode.childs.push(nodes[i]);
+			if (methodMetricType) {
+				if (methodMetricNode == null) {
+					methodMetricNode = new Object();
+					methodMetricNode.parent = contextNode;
+					methodMetricNode.name = tagNode.name + "MethodMetrics";
+					methodMetricNode.id = methodMetricNode.name;
+					methodMetricNode.label = "Method";
+					methodMetricNode.type = METHOD_METRICS_TYPE;
+					methodMetricNode.expanded = false;
+					methodMetricNode.childs = new Array();
+					tagNode.childs.push(methodMetricNode);
+				}
+				methodMetricNode.childs.push(nodes[i]);
+			} else {
+				if (atomicMetricNode == null) {
+					atomicMetricNode = new Object();
+					atomicMetricNode.parent = contextNode;
+					atomicMetricNode.name = tagNode.name + "AtomicMetrics";
+					atomicMetricNode.id = atomicMetricNode.name;
+					atomicMetricNode.label = "Atomic";
+					atomicMetricNode.type = ATOMIC_METRICS_TYPE;
+					atomicMetricNode.expanded = false;
+					atomicMetricNode.childs = new Array();
+					tagNode.childs.push(atomicMetricNode);
+				}
+				atomicMetricNode.childs.push(nodes[i]);
+			}
 		};
 		tagNode.loaded = true;
 		//tagNode.expanded =  false;
 		//displayExpandSign(tagNode.name);
 	};
-
+	
 	this.loadMetricInstances = function(contextNode, metricNode) {
 		if (metricNode.loaded) {
 			return;
 		}
-		var sparql = "select ?time ?value ?unit"
+		var sparql = "select ?time ?value ?unit ?method"
 				+ "	where { "
 				+ "		?MetricInstance :hasContext " + contextNode.name + " .\\n"
 				+ "		?MetricInstance rdf:type " + metricNode.name + " .\\n"
 				+ "		?MetricInstance :hasDataValue ?value .\\n"
 				+ "		?MetricInstance :hasTimeStamp ?time .\\n"
 				+ " " + metricNode.name + " :hasMeasurementUnit ?unit .\\n"
+				+ "		OPTIONAL {?methodExecution :hasMeasurement ?MetricInstance . \\n"
+				+ "               ?methodExecution :isMethodExecutionOf ?method} \\n"
 				+ "	} \\n"
 				+ "order by ?time ";
 
-		executeSparql([ "time", "value", "unit" ], sparql, true, function(data) {contextGraph.treatMetricInstances(contextNode, metricNode, data);});
+		executeSparql([ "time", "value", "unit", "method" ], sparql, true, function(data) {contextGraph.treatMetricInstances(contextNode, metricNode, data);});
 	};
 	
 	this.treatMetricInstances = function(contextNode, metricNode, data) {
@@ -426,6 +459,7 @@ function ContextGraph(metric, metricId) {
 			obj.time = data[i].time;
 			obj.value = data[i].value;
 			obj.unit = data[i].unit;
+			obj.method = data[i].method;
 			metricNode.instances.push(obj);
 		}
 		metricNode.loaded = true;
@@ -438,15 +472,19 @@ function ContextGraph(metric, metricId) {
 			return "#2ca02c";
 		} else if (d.type == METRIC_TYPE) {
 			return "#d62728";
-		}else if (d.type == CONTEXT_GROUP_TYPE) {
+		} else if (d.type == CONTEXT_GROUP_TYPE) {
 			return "#aec7e8";
 		} else if (d.type == TAG_GROUP_TYPE) {
+			return "#aec7e8";
+		} else if (d.type == METHOD_METRICS_TYPE) {
+			return "#aec7e8";
+		} else if (d.type == ATOMIC_METRICS_TYPE) {
 			return "#aec7e8";
 		}
 	};
 
 	this.expand = function(node) {
-		if (node.type != CONTEXT_GROUP_TYPE && node.type != TAG_GROUP_TYPE && node.type != TAG_TYPE) {
+		if (node.type != CONTEXT_GROUP_TYPE && node.type != TAG_GROUP_TYPE && node.type != TAG_TYPE && node.type != METHOD_METRICS_TYPE && node.type != ATOMIC_METRICS_TYPE) {
 			return;
 		}
 		if (node.expanded) {
@@ -466,9 +504,13 @@ function ContextGraph(metric, metricId) {
 					}
 				} else if (node.type == TAG_GROUP_TYPE) {
 					this.loadMetricTypes(node.childs[i].parent, node.childs[i]);
-				} else if (node.type == TAG_TYPE) {
+				} else if (node.type == METHOD_METRICS_TYPE) {
 					this.loadMetricInstances(node.parent, node.childs[i]);
-				}
+				} else if (node.type == ATOMIC_METRICS_TYPE) {
+					this.loadMetricInstances(node.parent, node.childs[i]);
+				} /*else if (node.type == TAG_TYPE) {
+					this.loadMetricInstances(node.parent, node.childs[i]);
+				}*/
 			}
 		}
 		node.expanded = !node.expanded;
@@ -615,6 +657,9 @@ function ContextGraph(metric, metricId) {
 				value = instance.value.substr(0, instance.value.indexOf("^^"));
 			}
 			instance.label = "Time: " + timeFormat(timeFormat1.parse(timeValue)) + ", Value: " + getFormattedValue(value, instance.unit);
+			if (instance.method != '') {
+				instance.label = instance.label + ", " + "Method: " + instance.method.substr(1);
+			}
 			if (instance.label.length > maxLengthLabel) {
 				maxLengthLabel = instance.label.length;
 			}

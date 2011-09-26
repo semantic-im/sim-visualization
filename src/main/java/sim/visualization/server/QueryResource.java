@@ -55,9 +55,15 @@ public class QueryResource extends ServerResource {
     			QueryRow qr = it.next();
     			JSONObject obj = new JSONObject();
     			for (int i = 0; i < selectVariableNames.length(); i++) {
-    				Node value = qr.getValue(selectVariableNames.getString(i));
-    				
-    				String name = value.toString();
+    				String name = null;
+    				try {
+    					Node value = qr.getValue(selectVariableNames.getString(i));
+    					name = value.toString();
+    				} catch (NullPointerException e) {
+    					logger.warn("can not find " + selectVariableNames.getString(i) + " in arguments !");
+    					name = "";
+    				}
+
     				for (String namespacePrefix : namespaces.keySet()) {
     					String namespace = namespaces.get(namespacePrefix);
     					if (name.contains(namespace)) {
