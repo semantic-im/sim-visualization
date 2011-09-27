@@ -113,8 +113,8 @@ function Chart(id, width, height) {
 	
 	this.chartMetrics = new Array();
 	
-	this.xFocus = d3.scale.linear().range([0, this.chartWidth]);
-	this.xContext = d3.scale.linear().range([0, this.chartWidth]);
+	this.xFocus = d3.scale.linear().range([-10, this.chartWidth]);
+	//this.xContext = d3.scale.linear().range([0, this.chartWidth]);
 	this.y = d3.scale.linear().range([this.chartHeight, 0]);
 	
 	this.minX;
@@ -169,10 +169,11 @@ Chart.prototype.init = function(color) {
 		.style("top", 2 + "px")
 		.style("left", 2 + "px");
 	
+	
 	this.focusArea = this.chartSvgArea.append("svg:g")
 		.attr("id", "focusArea")
 		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
-	
+
 	this.legend = new Legend(this);
 	
 	this.valuePreview = new ValuePreview(this);
@@ -182,6 +183,7 @@ Chart.prototype.processData = function(metric, data) {
 	var newData = new Array();
 	var metricType = metric.type();
 	var lastValue = 0;
+	data.reverse();
 	for ( var i = 0, n = data.length, o; i < n; i++) {
 		data[i].timestamp = data[i].timestamp.substr(0, data[i].timestamp.indexOf("^^"));
 		data[i].value = data[i].value.substr(0, data[i].value.indexOf("^^"));
@@ -230,14 +232,27 @@ Chart.prototype.displayChart = function() {
 };
 
 Chart.prototype.loadData = function(index, metric) {
-	var sparql = "select ?metricid ?timestamp ?value "
+	var sparql = null;
+	if (metric.data.length == 0) {
+		sparql = "select ?metricid ?timestamp ?value "
+				+ "	where { "
+				+ "		?metricid rdf:type <" + metric.metric + "> ."
+				+ "		?metricid :hasTimeStamp ?timestamp ."
+				+ "		?metricid :hasDataValue ?value ."
+				+ "	} "
+				+ "order by DESC(?timestamp) "
+				+ "LIMIT 200 OFFSET 0";
+	} else {
+		sparql = "select ?metricid ?timestamp ?value "
 			+ "	where { "
 			+ "		?metricid rdf:type <" + metric.metric + "> ."
 			+ "		?metricid :hasTimeStamp ?timestamp ."
 			+ "		?metricid :hasDataValue ?value ."
+			+ "     FILTER (?timestamp > xsd:dateTime(\"" + time(new Date(metric.data[metric.data.length - 1].x)) + "\"))"
 			+ "	} "
-			+ "order by ASC(?timestamp) "
-			+ "LIMIT 200 OFFSET 0";
+			+ "order by DESC(?timestamp) "
+			+ "LIMIT 200 OFFSET 0";		
+	}
 	var chart = this;
 	executeSparql([ "metricid", "timestamp", "value" ], sparql, true, function(data) {chart.treatData(index, data);});
 	setTimeout(function() {chart.checkAllDataLoadedFct();}, 100);
@@ -267,8 +282,20 @@ Chart.prototype.checkAllDataLoadedFct = function() {
 
 Chart.prototype.treatData = function(index, data) {
 	var metrics = this.chartMetrics;
-	metrics[index].data = this.processData(metrics[index], data);
-	metrics[index].focusData = metrics[index].data;
+	data = this.processData(metrics[index], data);
+	metrics[index].pointsShifted = 0;
+	if (metrics[index].data.length > 0) {
+		while (data.length > 0) {
+			if (metrics[index].data.length == 200) {
+				metrics[index].data.shift();
+				metrics[index].pointsShifted++;
+			}
+			metrics[index].data.push(data.shift());
+		}
+	} else {
+		metrics[index].data = data;
+		//metrics[index].focusData = metrics[index].data;
+	}
 	metrics[index].loaded = true;
 };
 
@@ -315,18 +342,69 @@ Chart.prototype.computeScales = function() {
 Chart.prototype.drawMetric = function(metric) {
 	var chart = this;
 	var multipleMetrics = (chart.chartMetrics.length > 1);
-
-	var focusPath = this.focusArea.append("svg:path").data([ metric.data ])
-		.attr("id", validID(metric.metric));
 	
+	var line = d3.svg.line()
+		.x(function(d,i) { 
+			return chart.xFocus(d.x); 
+		})
+		.y(function(d) { 
+			return chart.y(d.y); 
+		});
+		//.interpolate("basis");
+
+	var focusPath = this.focusArea.select("#" + validID(metric.metric));
+	if (focusPath.empty()) {
+		var focusPath = this.focusArea.append("svg:path")
+			.attr("d", line(metric.data))
+			.attr("id", validID(metric.metric));
+		//this.leftSpaceLabels = this.chartSvgArea.append("svg:g").attr("id", "leftSpaceLabels");
+		this.focusArea.append("svg:rect")
+			.attr("x", -this.leftSpaceWidth)
+			.attr("y", -1)
+			.attr("width", this.leftSpaceWidth)
+			.attr("height", this.allChartHeight + 1)
+			.style("fill", "white");
+
+		this.focusArea.append("svg:rect")
+			.attr("x", this.chartWidth)
+			.attr("y", -1)
+			.attr("width", this.rightSpaceWidth)
+			.attr("height", this.allChartHeight + 1)
+			.style("fill", "white");
+
+		if (multipleMetrics) {
+			focusPath.style("stroke", metric.fill);
+			focusPath.style("stroke-width", "2px");
+			focusPath.style("fill", "none");
+		} else {
+			focusPath.style("fill", metric.fill);
+			focusPath.style("fill-opacity", ".8");
+			focusPath.style("stroke", metric.fill);
+			focusPath.style("stroke-width", "1px");
+		}
+	}
+	
+	var focusPath = this.focusArea.selectAll("#" + validID(metric.metric));
+	
+	var translate1 = chart.xFocus(metric.data[metric.data.length - 1].x) - chart.xFocus(metric.data[metric.data.length - metric.pointsShifted - 1].x);
 	if (multipleMetrics) {
-		focusPath.attr("d", d3.svg.line().x(function(d) {return chart.xFocus(d.x);})
-				.y(function(d) {
-					return chart.y(d.y);
-				}));
-		focusPath.style("stroke", metric.fill);
-		focusPath.style("stroke-width", "2px");
-		focusPath.style("fill", "none");
+		this.focusArea.selectAll("circle.value").remove();
+		focusPath
+			.data([metric.data])
+			.attr("transform", "translate(" + translate1 + ")")
+			.attr("d", line)
+			.transition()
+			.ease("linear")
+			.duration(5000)
+			.attr("transform", "translate(0)");
+		/*
+		this.focusArea.selectAll("circle.value")
+			.attr("transform", "translate(" + translate1 + ")")
+			.transition()
+			.ease("linear")
+			.duration(5000)
+			.attr("transform", "translate(0)");
+		*/
 	} else {
 		focusPath.attr("d", d3.svg.area().x(function(d) {return chart.xFocus(d.x);})
 				// .y0(y1(0))
@@ -334,27 +412,25 @@ Chart.prototype.drawMetric = function(metric) {
 				.y1(function(d) {
 					return chart.y(d.y);
 				}));
-		focusPath.style("fill", metric.fill);
-		focusPath.style("fill-opacity", ".8");
-		focusPath.style("stroke", metric.fill);
-		focusPath.style("stroke-width", "1px");
-	}
-	
+	}	
+
 };
 
 Chart.prototype.drawChart = function() {
 	var chart = this;
 	
+	this.focusArea.selectAll("circle.value").remove();
+	
 	// Update x- and y-scales.
 	this.xFocus.domain([ this.minX, this.maxX ]);
 	this.y.domain([ this.minY, this.maxY ]);
 
-	this.chartSvgArea.selectAll("rect").remove();
+	//this.chartSvgArea.selectAll("rect").remove();
 	this.chartSvgArea.selectAll("text").remove();
 	
 	// Focus view.
 	this.focusArea.selectAll("rect.bar").remove();
-	this.focusArea.selectAll("path").remove();
+	//this.focusArea.selectAll("path").remove();
 
 	this.focusArea.selectAll("line").remove();
 	this.focusArea.append("svg:line")
@@ -539,7 +615,7 @@ Chart.prototype.drawGrid = function() {
 	this.focusArea.selectAll("text.y-grid")
 		.data(yValues)
 		.enter()
-		.insert("svg:text", "path")
+		.insert("svg:text")
 		.attr("class", "y-grid")
 		.style("font-family", "Verdana")
 		.style("font-size", "8px")
@@ -570,10 +646,10 @@ Chart.prototype.showValues = function() {
 		var metric = metrics[i];
 		var dataValue = null;
 		var mainDiff = Infinity;
-		for (var j = 0; j < metric.focusData.length; j++) {
-			var diff = Math.abs(x - metric.focusData[j].x);
+		for (var j = 0; j < metric.data.length; j++) {
+			var diff = Math.abs(x - metric.data[j].x);
 			if (diff < mainDiff) {
-				dataValue = metric.focusData[j];
+				dataValue = metric.data[j];
 				mainDiff = diff;
 			}
 		}
@@ -641,12 +717,10 @@ $(document).ready(function() {
 	chart2.legend.refreshLegend();
 	chart2.valuePreview.refreshValuePreview();
 	
-	setTimeout(refreshFct, 5000);
+	setInterval(refreshFct, 5000);
 });
 
 var refreshFct = function() {
-	console.debug("ASdasd");
 	chart1.displayChart();
 	chart2.displayChart();	
-	setTimeout(refreshFct, 5000);
 };
