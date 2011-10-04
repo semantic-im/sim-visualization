@@ -18,6 +18,10 @@ Metric.TIMESTAMP = ":TimePoint";
 Metric.COUNTER = ":Counter";
 Metric.NUMERIC = ":NumericValue";
 
+var CHART_MIN_POINTS = 50; //the number of points to use for chart 
+var MAX_POINTS_FROM_BUFFER = 5;//the maximum points to read from the buffer of data
+var xGridValues = new Array();
+
 function Metric(id, label, description, unit, unitLabel) {
 
 	this.metric = id;
@@ -32,6 +36,7 @@ function Metric(id, label, description, unit, unitLabel) {
 	this.fill = null;
 	
 	this.data = new Array();
+	this.bufferData = new Array();
 	this.focusData = new Array();
 
 	this.type = function() {
@@ -113,7 +118,7 @@ function Chart(id, width, height) {
 	
 	this.chartMetrics = new Array();
 	
-	this.xFocus = d3.scale.linear().range([-10, this.chartWidth]);
+	this.xFocus = d3.scale.linear().range([-200, this.chartWidth]);
 	//this.xContext = d3.scale.linear().range([0, this.chartWidth]);
 	this.y = d3.scale.linear().range([this.chartHeight, 0]);
 	
@@ -214,26 +219,17 @@ Chart.prototype.addMetricToChart = function(metric) {
 };
 
 
-Chart.prototype.displayChart = function() {
+Chart.prototype.loadChartData = function() {
 	var metrics = this.chartMetrics;
 	for (var i = 0; i < metrics.length; i++) {
 		metrics[i].loaded = false;
 		this.loadData(i, metrics[i]);
 	};
-	
-	/*
-	this.computeScales();
-	this.drawChart();
-	for (var i = 0; i < metrics.length; i++) {
-		this.drawMetric(metrics[i]);
-	}
-	this.drawGrid();
-	*/
 };
 
 Chart.prototype.loadData = function(index, metric) {
 	var sparql = null;
-	if (metric.data.length == 0) {
+	if (metric.data.length == 0 && metric.bufferData.length == 0) {
 		sparql = "select ?metricid ?timestamp ?value "
 				+ "	where { "
 				+ "		?metricid rdf:type <" + metric.metric + "> ."
@@ -241,21 +237,27 @@ Chart.prototype.loadData = function(index, metric) {
 				+ "		?metricid :hasDataValue ?value ."
 				+ "	} "
 				+ "order by DESC(?timestamp) "
-				+ "LIMIT 200 OFFSET 0";
+				+ "LIMIT " + CHART_MIN_POINTS + " OFFSET 0";
 	} else {
+		var timeFilter = null;
+		if (metric.bufferData.length != 0) {
+			timeFilter = time(new Date(metric.bufferData[metric.bufferData.length - 1].x));
+		} else {
+			timeFilter = time(new Date(metric.data[metric.data.length - 1].x));
+		}
 		sparql = "select ?metricid ?timestamp ?value "
 			+ "	where { "
 			+ "		?metricid rdf:type <" + metric.metric + "> ."
 			+ "		?metricid :hasTimeStamp ?timestamp ."
 			+ "		?metricid :hasDataValue ?value ."
-			+ "     FILTER (?timestamp > xsd:dateTime(\"" + time(new Date(metric.data[metric.data.length - 1].x)) + "\"))"
+			+ "     FILTER (?timestamp > xsd:dateTime(\"" + timeFilter + "\"))"
 			+ "	} "
 			+ "order by DESC(?timestamp) "
-			+ "LIMIT 200 OFFSET 0";		
+			+ "LIMIT " + CHART_MIN_POINTS + " OFFSET 0";		
 	}
 	var chart = this;
 	executeSparql([ "metricid", "timestamp", "value" ], sparql, true, function(data) {chart.treatData(index, data);});
-	setTimeout(function() {chart.checkAllDataLoadedFct();}, 100);
+	setTimeout(function() {chart.checkAllDataLoadedFct();}, 500);
 };
 
 Chart.prototype.checkAllDataLoadedFct = function() {
@@ -268,25 +270,27 @@ Chart.prototype.checkAllDataLoadedFct = function() {
 			break;
 		}
 	}
-	if (!notLoaded) {
-		this.continueDisplayChart();
-	} else {
+	if (notLoaded) {
+		/*
 		  var date = new Date();
 		  var curDate = null;
 		  do { curDate = new Date(); }
 		  while(curDate-date < 1000);
-
-		setTimeout(function() {chart.checkAllDataLoadedFct();}, 100);
+		*/
+		setTimeout(function() {chart.checkAllDataLoadedFct();}, 500);
 	}
 };
 
 Chart.prototype.treatData = function(index, data) {
 	var metrics = this.chartMetrics;
 	data = this.processData(metrics[index], data);
-	metrics[index].pointsShifted = 0;
+	for (var i = 0; i < data.length; i++) {
+		metrics[index].bufferData.push(data[i]);
+	}
+	/*
 	if (metrics[index].data.length > 0) {
 		while (data.length > 0) {
-			if (metrics[index].data.length == 200) {
+			if (metrics[index].data.length == CHART_MIN_POINTS) {
 				metrics[index].data.shift();
 				metrics[index].pointsShifted++;
 			}
@@ -296,13 +300,31 @@ Chart.prototype.treatData = function(index, data) {
 		metrics[index].data = data;
 		//metrics[index].focusData = metrics[index].data;
 	}
+	*/
 	metrics[index].loaded = true;
 };
 
-Chart.prototype.continueDisplayChart = function() {
+Chart.prototype.displayChart = function() {
+	var metrics = this.chartMetrics;
+	for (var i = 0; i < metrics.length; i++) {
+		metrics[i].pointsShifted = 0;
+		if (metrics[i].data.length != 0) {
+			for (var j = 0; j < Math.min(MAX_POINTS_FROM_BUFFER, metrics[i].bufferData.length); j++) {
+				if (metrics[i].data.length == CHART_MIN_POINTS) {
+					metrics[i].data.shift();
+					metrics[i].pointsShifted++;
+				}
+				metrics[i].data.push(metrics[i].bufferData.shift());
+			}
+		} else {
+			for (var j = 0; j < metrics[i].bufferData.length; j++) {
+				metrics[i].data.push(metrics[i].bufferData[j]);
+			}
+			metrics[i].bufferData = new Array();
+		}
+	}
 	this.computeScales();
 	this.drawChart();
-	var metrics = this.chartMetrics;
 	for (var i = 0; i < metrics.length; i++) {
 		this.drawMetric(metrics[i]);
 	}
@@ -386,16 +408,16 @@ Chart.prototype.drawMetric = function(metric) {
 	
 	var focusPath = this.focusArea.selectAll("#" + validID(metric.metric));
 	
-	var translate1 = chart.xFocus(metric.data[metric.data.length - 1].x) - chart.xFocus(metric.data[metric.data.length - metric.pointsShifted - 1].x);
+	var translate1 = chart.xFocus(metric.data[metric.pointsShifted].x) - chart.xFocus(metric.data[0].x);
 	if (multipleMetrics) {
-		this.focusArea.selectAll("circle.value").remove();
+		//this.focusArea.selectAll("circle.value").remove();
 		focusPath
 			.data([metric.data])
 			.attr("transform", "translate(" + translate1 + ")")
 			.attr("d", line)
 			.transition()
 			.ease("linear")
-			.duration(5000)
+			.duration(10000)
 			.attr("transform", "translate(0)");
 		/*
 		this.focusArea.selectAll("circle.value")
@@ -419,7 +441,7 @@ Chart.prototype.drawMetric = function(metric) {
 Chart.prototype.drawChart = function() {
 	var chart = this;
 	
-	this.focusArea.selectAll("circle.value").remove();
+	//this.focusArea.selectAll("circle.value").remove();
 	
 	// Update x- and y-scales.
 	this.xFocus.domain([ this.minX, this.maxX ]);
@@ -491,105 +513,106 @@ Chart.prototype.getYLabel = function(value) {
 
 Chart.prototype.drawGrid = function() {
 	var verticalGridMinSpace = 120;
-	var verticalGridLineCount = Math.floor(this.allChartWidth / verticalGridMinSpace) - 1 - 1; //substract 1 for the start and 1 for the rest which will be distributed
-	
-	var differenceTimeMilliSeconds = this.focusMaxX - this.focusMinX;
-	var differenceTimeSeconds = Math.floor(differenceTimeMilliSeconds / 1000);
-	var differenceTimeMinutes = Math.floor(differenceTimeSeconds / 60);
-	var differenceTimeHours = Math.floor(differenceTimeMinutes / 60);
-	var differenceTimeDays = Math.floor(differenceTimeHours / 24);
-	var differenceTimeWeeks = Math.floor(differenceTimeDays / 7);
-	var differenceTimeMonths = Math.floor(differenceTimeDays / 4);
-	var differenceTimeYears = Math.floor(differenceTimeDays / 12);
-	
-	var areMilliSecondsGoodDivider = differenceTimeMilliSeconds > verticalGridLineCount;
-	var areSecondsGoodDivider = differenceTimeSeconds > verticalGridLineCount;
-	var areMinutesGoodDivider = differenceTimeMinutes > verticalGridLineCount;
-	var areHoursGoodDivider = differenceTimeHours > verticalGridLineCount;
-	var areDaysGoodDivider = differenceTimeDays > verticalGridLineCount;
-	var areWeeksGoodDivider = differenceTimeWeeks > verticalGridLineCount;
-	var areMonthsGoodDivider = differenceTimeMonths > verticalGridLineCount;
-	var areYearsGoodDivider = differenceTimeYears > verticalGridLineCount;
-	
-	var increment = 0;
-	var rest = 0;
-	this.xScaleTimeFormat = null;
-	if (!areMilliSecondsGoodDivider) {
-		//can't diplay vertical grid cause not enough values 
-		return;
-	} else if (!areSecondsGoodDivider) {
-		increment = Math.floor(differenceTimeMilliSeconds / verticalGridLineCount);
-		rest = differenceTimeMilliSeconds % verticalGridLineCount;
-		this.xScaleTimeFormat = d3.time.format("%S");
-	} else if (!areMinutesGoodDivider) {
-		increment = Math.floor(differenceTimeSeconds / verticalGridLineCount) * 1000;
-		rest = (differenceTimeSeconds % verticalGridLineCount) * 1000;
-		this.xScaleTimeFormat = d3.time.format("%M:%S");
-	} else if (!areHoursGoodDivider) {
-		increment = Math.floor(differenceTimeMinutes / verticalGridLineCount) * 1000 * 60;
-		rest = (differenceTimeMinutes % verticalGridLineCount) * 1000 * 60;
-		this.xScaleTimeFormat = d3.time.format("%M");
-	} else if (!areDaysGoodDivider) {
-		increment = Math.floor(differenceTimeHours / verticalGridLineCount) * 1000 * 60 * 60;
-		rest = (differenceTimeHours % verticalGridLineCount) * 1000 * 60 * 60;
-		this.xScaleTimeFormat = d3.time.format("%H:%M");
-	} else if (!areWeeksGoodDivider) {
-		increment = Math.floor(differenceTimeDays / verticalGridLineCount) * 1000 * 60 * 60 * 24;
-		rest = (differenceTimeDays % verticalGridLineCount) * 1000 * 60 * 60 * 24;
-		this.xScaleTimeFormat = d3.time.format("%a");
-	} else if (!areMonthsGoodDivider) {
-		increment = Math.floor(differenceTimeWeeks / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
-		rest = (differenceTimeWeeks % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
-		this.xScaleTimeFormat = d3.time.format("%W");
-	} else if (!areYearsGoodDivider) {
-		increment = Math.floor(differenceTimeMonths / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
-		rest = (differenceTimeMonths % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
-		this.xScaleTimeFormat = d3.time.format("%d %b");
-	} else {
-		increment = Math.floor(differenceTimeYears / verticalGridLineCount)  * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
-		rest = (differenceTimeYears % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
-		this.xScaleTimeFormat = d3.time.format("%b %y");		
-	}
-
-	var xValues = new Array();
-	var restAdding = Math.floor(rest / verticalGridLineCount);
-	for (var i = 1; i < verticalGridLineCount; i++) {
-		xValues.push(this.focusMinX + (increment * i) + (restAdding * i));
-	}
-	
-	this.focusArea.selectAll("line.x-grid").remove();
-	this.focusArea.selectAll("line.y-grid").remove();
-	this.focusArea.selectAll("text.x-grid").remove();
-	this.focusArea.selectAll("text.y-grid").remove();
-	
 	var chart = this;
-	this.focusArea.selectAll("line.x-grid")
-		.data(xValues)
-		.enter()
-		.insert("svg:line", "path")
-		.attr("class", "x-grid")
-		.attr("x1", function(d) {return chart.xFocus(d);})
-		.attr("x2", function(d) {return chart.xFocus(d);})
-		.attr("y1", this.y(this.focusMinY))
-		.attr("y2", this.y(this.focusMaxY));
-	this.focusArea.selectAll("text.x-grid")
-		.data(xValues)
-		.enter()
-		.insert("svg:text", "path")
-		.attr("class", "x-grid")
-		.style("font-family", "Verdana")
-		.style("font-size", "8px")
-		.style("text-anchor", "middle")
-		.attr("x", function(d) {return chart.xFocus(d);})
-		.attr("y", this.chartHeight + 10)
-		.text(function(d) {
-			if (!areSecondsGoodDivider) {
-				return chart.xScaleTimeFormat(new Date(d)) + "." + (d % 1000);
-			} else {
-				return chart.xScaleTimeFormat(new Date(d));
-			}
-		});
 	
+	if (xGridValues.length == 0) {
+		var verticalGridLineCount = Math.floor(this.allChartWidth / verticalGridMinSpace);
+		
+		var differenceTimeMilliSeconds = this.focusMaxX - this.focusMinX;
+		var differenceTimeSeconds = Math.floor(differenceTimeMilliSeconds / 1000);
+		var differenceTimeMinutes = Math.floor(differenceTimeSeconds / 60);
+		var differenceTimeHours = Math.floor(differenceTimeMinutes / 60);
+		var differenceTimeDays = Math.floor(differenceTimeHours / 24);
+		var differenceTimeWeeks = Math.floor(differenceTimeDays / 7);
+		var differenceTimeMonths = Math.floor(differenceTimeDays / 4);
+		var differenceTimeYears = Math.floor(differenceTimeDays / 12);
+		
+		var areMilliSecondsGoodDivider = differenceTimeMilliSeconds > verticalGridLineCount;
+		var areSecondsGoodDivider = differenceTimeSeconds > verticalGridLineCount;
+		var areMinutesGoodDivider = differenceTimeMinutes > verticalGridLineCount;
+		var areHoursGoodDivider = differenceTimeHours > verticalGridLineCount;
+		var areDaysGoodDivider = differenceTimeDays > verticalGridLineCount;
+		var areWeeksGoodDivider = differenceTimeWeeks > verticalGridLineCount;
+		var areMonthsGoodDivider = differenceTimeMonths > verticalGridLineCount;
+		var areYearsGoodDivider = differenceTimeYears > verticalGridLineCount;
+		
+		var increment = 0;
+		var rest = 0;
+		this.xScaleTimeFormat = null;
+		if (!areMilliSecondsGoodDivider) {
+			//can't diplay vertical grid cause not enough values 
+			return;
+		} else if (!areSecondsGoodDivider) {
+			increment = Math.floor(differenceTimeMilliSeconds / verticalGridLineCount);
+			rest = differenceTimeMilliSeconds % verticalGridLineCount;
+			this.xScaleTimeFormat = d3.time.format("%S");
+		} else if (!areMinutesGoodDivider) {
+			increment = Math.floor(differenceTimeSeconds / verticalGridLineCount) * 1000;
+			rest = (differenceTimeSeconds % verticalGridLineCount) * 1000;
+			this.xScaleTimeFormat = d3.time.format("%M:%S");
+		} else if (!areHoursGoodDivider) {
+			increment = Math.floor(differenceTimeMinutes / verticalGridLineCount) * 1000 * 60;
+			rest = (differenceTimeMinutes % verticalGridLineCount) * 1000 * 60;
+			this.xScaleTimeFormat = d3.time.format("%M");
+		} else if (!areDaysGoodDivider) {
+			increment = Math.floor(differenceTimeHours / verticalGridLineCount) * 1000 * 60 * 60;
+			rest = (differenceTimeHours % verticalGridLineCount) * 1000 * 60 * 60;
+			this.xScaleTimeFormat = d3.time.format("%H:%M");
+		} else if (!areWeeksGoodDivider) {
+			increment = Math.floor(differenceTimeDays / verticalGridLineCount) * 1000 * 60 * 60 * 24;
+			rest = (differenceTimeDays % verticalGridLineCount) * 1000 * 60 * 60 * 24;
+			this.xScaleTimeFormat = d3.time.format("%a");
+		} else if (!areMonthsGoodDivider) {
+			increment = Math.floor(differenceTimeWeeks / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
+			rest = (differenceTimeWeeks % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
+			this.xScaleTimeFormat = d3.time.format("%W");
+		} else if (!areYearsGoodDivider) {
+			increment = Math.floor(differenceTimeMonths / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
+			rest = (differenceTimeMonths % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
+			this.xScaleTimeFormat = d3.time.format("%d %b");
+		} else {
+			increment = Math.floor(differenceTimeYears / verticalGridLineCount)  * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
+			rest = (differenceTimeYears % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
+			this.xScaleTimeFormat = d3.time.format("%b %y");		
+		}
+		var restAdding = Math.floor(rest / verticalGridLineCount);
+		for (var i = 1; i < verticalGridLineCount; i++) {
+			xGridValues.push(this.focusMinX + (increment * i) + (restAdding * i));
+		}
+		
+		this.focusArea.selectAll("line.x-grid")
+			.data(xGridValues)
+			.enter()
+			.insert("svg:line", "path")
+			.attr("class", "x-grid")
+			.attr("x1", function(d) {return chart.xFocus(d);})
+			.attr("x2", function(d) {return chart.xFocus(d);})
+			.attr("y1", this.y(this.focusMinY))
+			.attr("y2", this.y(this.focusMaxY));
+		this.focusArea.selectAll("text.x-grid")
+			.data(xGridValues)
+			.enter()
+			.insert("svg:text", "path")
+			.attr("class", "x-grid")
+			.style("font-family", "Verdana")
+			.style("font-size", "8px")
+			.style("text-anchor", "middle")
+			.attr("x", function(d) {return chart.xFocus(d);})
+			.attr("y", this.chartHeight + 10)
+			.text(function(d) {
+				if (!areSecondsGoodDivider) {
+					return chart.xScaleTimeFormat(new Date(d)) + "." + (d % 1000);
+				} else {
+					return chart.xScaleTimeFormat(new Date(d));
+				}
+			});
+	}
+	
+	//this.focusArea.selectAll("line.x-grid").remove();
+	//this.focusArea.selectAll("text.x-grid").remove();
+	this.focusArea.selectAll("line.y-grid").remove();
+	this.focusArea.selectAll("text.y-grid").remove();
+		
 	//
 	
 	var horizontalGridMinSpace = 60;
@@ -661,6 +684,7 @@ Chart.prototype.showValues = function() {
 
 	var chart = this;
 
+	/*
 	this.focusArea.selectAll("circle.value").remove();
 	this.focusArea.selectAll("circle.value")
 		.data(dataValues).enter()
@@ -674,6 +698,7 @@ Chart.prototype.showValues = function() {
 		})
 		.attr("r", "2")
 		.style("fill", "red");
+	*/
 	
 };
 
@@ -696,7 +721,8 @@ $(document).ready(function() {
 	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#UserCPULoad', 'User CPU Load', 'description', ':Percent', '%'));
 	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#IdleCPULoad', 'Idle CPU Load', 'description', ':Percent', '%'));
 	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#WaitCPULoad', 'Wait CPU Load', 'description', ':Percent', '%'));
-	chart1.displayChart();
+	chart1.loadChartData();
+	//chart1.displayChart();
 	chart1.legend.refreshLegend();
 	chart1.valuePreview.refreshValuePreview();
 	
@@ -707,18 +733,27 @@ $(document).ready(function() {
 		.style("top", ((chartsDashboardHeight - 2) / 2) + "px")
 		.style("left", 0 + "px");
 	
+	/**/
 	chart2 = new Chart("chart2", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	chart2.init(chartColors(2));
 	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformAllocatedMemory', 'Platform Allocated Memory.', 'description', ':Byte', 'b'));
 	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformFreeMemory', 'Platform Free Memory.', 'description', ':Byte', 'b'));
 	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUnallocatedMemory', 'Platform Unallocated Memory.', 'description', ':Byte', 'b'));
 	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUsedMemory', 'Platform Used Memory.', 'description', ':Byte', 'b'));
-	chart2.displayChart();
+	chart2.loadChartData();
+	//chart2.displayChart();
 	chart2.legend.refreshLegend();
 	chart2.valuePreview.refreshValuePreview();
+	/**/
 	
-	setInterval(refreshFct, 5000);
+	setInterval(loadDataFct, 10000);
+	setInterval(refreshFct, 10000);
 });
+
+var loadDataFct = function() {
+	chart1.loadChartData();
+	chart2.loadChartData();	
+};
 
 var refreshFct = function() {
 	chart1.displayChart();
