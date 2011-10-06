@@ -118,7 +118,7 @@ function Chart(id, width, height) {
 	
 	this.chartMetrics = new Array();
 	
-	this.xFocus = d3.scale.linear().range([-200, this.chartWidth]);
+	this.xFocus = d3.scale.linear().range([-200, this.chartWidth + 10]);
 	//this.xContext = d3.scale.linear().range([0, this.chartWidth]);
 	this.y = d3.scale.linear().range([this.chartHeight, 0]);
 	
@@ -163,7 +163,6 @@ Chart.prototype.init = function(color) {
 		for (var i = 0; i < chart.mouseMoveHandlers.length; i++) {
 			chart.mouseMoveHandlers[i].call();
 		}
-		chart.showValues();
 	});
 
 	this.chartSvgArea = d3.select("#" + this.id)
@@ -178,6 +177,20 @@ Chart.prototype.init = function(color) {
 	this.focusArea = this.chartSvgArea.append("svg:g")
 		.attr("id", "focusArea")
 		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
+
+	this.focusArea.append("svg:rect")
+		.attr("x", -this.leftSpaceWidth)
+		.attr("y", -1)
+		.attr("width", this.leftSpaceWidth)
+		.attr("height", this.allChartHeight + 1)
+		.style("fill", "white");
+	
+	this.focusArea.append("svg:rect")
+		.attr("x", this.chartWidth)
+		.attr("y", -1)
+		.attr("width", this.rightSpaceWidth)
+		.attr("height", this.allChartHeight + 1)
+		.style("fill", "white");
 
 	this.legend = new Legend(this);
 	
@@ -328,6 +341,7 @@ Chart.prototype.displayChart = function() {
 	for (var i = 0; i < metrics.length; i++) {
 		this.drawMetric(metrics[i]);
 	}
+	this.showValues();
 	this.drawGrid();
 };
 
@@ -372,27 +386,13 @@ Chart.prototype.drawMetric = function(metric) {
 		.y(function(d) { 
 			return chart.y(d.y); 
 		});
-		//.interpolate("basis");
+		//.interpolate("linear");
 
 	var focusPath = this.focusArea.select("#" + validID(metric.metric));
 	if (focusPath.empty()) {
-		var focusPath = this.focusArea.append("svg:path")
+		var focusPath = this.focusArea.insert("svg:path", "rect")
 			.attr("d", line(metric.data))
 			.attr("id", validID(metric.metric));
-		//this.leftSpaceLabels = this.chartSvgArea.append("svg:g").attr("id", "leftSpaceLabels");
-		this.focusArea.append("svg:rect")
-			.attr("x", -this.leftSpaceWidth)
-			.attr("y", -1)
-			.attr("width", this.leftSpaceWidth)
-			.attr("height", this.allChartHeight + 1)
-			.style("fill", "white");
-
-		this.focusArea.append("svg:rect")
-			.attr("x", this.chartWidth)
-			.attr("y", -1)
-			.attr("width", this.rightSpaceWidth)
-			.attr("height", this.allChartHeight + 1)
-			.style("fill", "white");
 
 		if (multipleMetrics) {
 			focusPath.style("stroke", metric.fill);
@@ -430,7 +430,7 @@ Chart.prototype.drawMetric = function(metric) {
 	} else {
 		focusPath.attr("d", d3.svg.area().x(function(d) {return chart.xFocus(d.x);})
 				// .y0(y1(0))
-				.y0(this.y(this.minY))
+				.y(this.y(this.minY))
 				.y1(function(d) {
 					return chart.y(d.y);
 				}));
@@ -448,13 +448,13 @@ Chart.prototype.drawChart = function() {
 	this.y.domain([ this.minY, this.maxY ]);
 
 	//this.chartSvgArea.selectAll("rect").remove();
-	this.chartSvgArea.selectAll("text").remove();
+	//this.chartSvgArea.selectAll("text").remove();
 	
 	// Focus view.
 	this.focusArea.selectAll("rect.bar").remove();
 	//this.focusArea.selectAll("path").remove();
 
-	this.focusArea.selectAll("line").remove();
+	this.focusArea.selectAll("line.chart").remove();
 	this.focusArea.append("svg:line")
 		.attr("class", "chart")
 		.attr("x1", 0)
@@ -467,22 +467,7 @@ Chart.prototype.drawChart = function() {
 		.attr("x2", 0)
 		.attr("y1", this.y(this.minY))
 		.attr("y2", this.y(this.maxY));
-	this.focusArea.selectAll("text").remove();
-	this.focusArea.append("svg:text")
-		.attr("id", "x0label")
-		.attr("font-family", "Verdana")
-		.attr("font-size", "8")
-		.attr("x", 0)
-		.attr("y", this.chartHeight + 10)
-		.text(shortTime(new Date(this.minX)));
-	this.focusArea.append("svg:text")
-		.attr("id", "x1label")
-		.attr("font-family", "Verdana")
-		.attr("font-size", "8")
-		.attr("text-anchor", "end")
-		.attr("x", this.chartWidth)
-		.attr("y", this.chartHeight + 10)
-		.text(shortTime(new Date(this.maxX)));	
+	this.focusArea.select("#y0label").remove();
 	this.focusArea.append("svg:text")
 		.attr("id", "y0label")
 		.attr("font-family", "Verdana")
@@ -490,7 +475,8 @@ Chart.prototype.drawChart = function() {
 		.attr("text-anchor", "end")
 		.attr("x", 0)
 		.attr("y", this.chartHeight)
-		.text(this.getYLabel(this.minY));	
+		.text(this.getYLabel(this.minY));
+	this.focusArea.select("#y1label").remove();
 	this.focusArea.append("svg:text")
 		.attr("id", "y1label")
 		.attr("font-family", "Verdana")
@@ -511,108 +497,114 @@ Chart.prototype.getYLabel = function(value) {
 	return aMetric.getFormattedValue(value);
 };
 
+function xGridId(d) {
+	return d.id;
+}
+
 Chart.prototype.drawGrid = function() {
 	var verticalGridMinSpace = 120;
 	var chart = this;
 	
-	if (xGridValues.length == 0) {
-		var verticalGridLineCount = Math.floor(this.allChartWidth / verticalGridMinSpace);
-		
-		var differenceTimeMilliSeconds = this.focusMaxX - this.focusMinX;
-		var differenceTimeSeconds = Math.floor(differenceTimeMilliSeconds / 1000);
-		var differenceTimeMinutes = Math.floor(differenceTimeSeconds / 60);
-		var differenceTimeHours = Math.floor(differenceTimeMinutes / 60);
-		var differenceTimeDays = Math.floor(differenceTimeHours / 24);
-		var differenceTimeWeeks = Math.floor(differenceTimeDays / 7);
-		var differenceTimeMonths = Math.floor(differenceTimeDays / 4);
-		var differenceTimeYears = Math.floor(differenceTimeDays / 12);
-		
-		var areMilliSecondsGoodDivider = differenceTimeMilliSeconds > verticalGridLineCount;
-		var areSecondsGoodDivider = differenceTimeSeconds > verticalGridLineCount;
-		var areMinutesGoodDivider = differenceTimeMinutes > verticalGridLineCount;
-		var areHoursGoodDivider = differenceTimeHours > verticalGridLineCount;
-		var areDaysGoodDivider = differenceTimeDays > verticalGridLineCount;
-		var areWeeksGoodDivider = differenceTimeWeeks > verticalGridLineCount;
-		var areMonthsGoodDivider = differenceTimeMonths > verticalGridLineCount;
-		var areYearsGoodDivider = differenceTimeYears > verticalGridLineCount;
-		
-		var increment = 0;
-		var rest = 0;
-		this.xScaleTimeFormat = null;
-		if (!areMilliSecondsGoodDivider) {
-			//can't diplay vertical grid cause not enough values 
-			return;
-		} else if (!areSecondsGoodDivider) {
-			increment = Math.floor(differenceTimeMilliSeconds / verticalGridLineCount);
-			rest = differenceTimeMilliSeconds % verticalGridLineCount;
-			this.xScaleTimeFormat = d3.time.format("%S");
-		} else if (!areMinutesGoodDivider) {
-			increment = Math.floor(differenceTimeSeconds / verticalGridLineCount) * 1000;
-			rest = (differenceTimeSeconds % verticalGridLineCount) * 1000;
-			this.xScaleTimeFormat = d3.time.format("%M:%S");
-		} else if (!areHoursGoodDivider) {
-			increment = Math.floor(differenceTimeMinutes / verticalGridLineCount) * 1000 * 60;
-			rest = (differenceTimeMinutes % verticalGridLineCount) * 1000 * 60;
-			this.xScaleTimeFormat = d3.time.format("%M");
-		} else if (!areDaysGoodDivider) {
-			increment = Math.floor(differenceTimeHours / verticalGridLineCount) * 1000 * 60 * 60;
-			rest = (differenceTimeHours % verticalGridLineCount) * 1000 * 60 * 60;
-			this.xScaleTimeFormat = d3.time.format("%H:%M");
-		} else if (!areWeeksGoodDivider) {
-			increment = Math.floor(differenceTimeDays / verticalGridLineCount) * 1000 * 60 * 60 * 24;
-			rest = (differenceTimeDays % verticalGridLineCount) * 1000 * 60 * 60 * 24;
-			this.xScaleTimeFormat = d3.time.format("%a");
-		} else if (!areMonthsGoodDivider) {
-			increment = Math.floor(differenceTimeWeeks / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
-			rest = (differenceTimeWeeks % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
-			this.xScaleTimeFormat = d3.time.format("%W");
-		} else if (!areYearsGoodDivider) {
-			increment = Math.floor(differenceTimeMonths / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
-			rest = (differenceTimeMonths % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
-			this.xScaleTimeFormat = d3.time.format("%d %b");
-		} else {
-			increment = Math.floor(differenceTimeYears / verticalGridLineCount)  * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
-			rest = (differenceTimeYears % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
-			this.xScaleTimeFormat = d3.time.format("%b %y");		
-		}
-		var restAdding = Math.floor(rest / verticalGridLineCount);
-		for (var i = 1; i < verticalGridLineCount; i++) {
-			xGridValues.push(this.focusMinX + (increment * i) + (restAdding * i));
-		}
-		
-		this.focusArea.selectAll("line.x-grid")
-			.data(xGridValues)
-			.enter()
-			.insert("svg:line", "path")
-			.attr("class", "x-grid")
-			.attr("x1", function(d) {return chart.xFocus(d);})
-			.attr("x2", function(d) {return chart.xFocus(d);})
-			.attr("y1", this.y(this.focusMinY))
-			.attr("y2", this.y(this.focusMaxY));
-		this.focusArea.selectAll("text.x-grid")
-			.data(xGridValues)
-			.enter()
-			.insert("svg:text", "path")
-			.attr("class", "x-grid")
-			.style("font-family", "Verdana")
-			.style("font-size", "8px")
-			.style("text-anchor", "middle")
-			.attr("x", function(d) {return chart.xFocus(d);})
-			.attr("y", this.chartHeight + 10)
-			.text(function(d) {
-				if (!areSecondsGoodDivider) {
-					return chart.xScaleTimeFormat(new Date(d)) + "." + (d % 1000);
-				} else {
-					return chart.xScaleTimeFormat(new Date(d));
-				}
-			});
-	}
+	var verticalGridLineCount = Math.floor(this.chartWidth / verticalGridMinSpace) + 1;
 	
-	//this.focusArea.selectAll("line.x-grid").remove();
-	//this.focusArea.selectAll("text.x-grid").remove();
-	this.focusArea.selectAll("line.y-grid").remove();
-	this.focusArea.selectAll("text.y-grid").remove();
-		
+	var differenceTimeMilliSeconds = this.focusMaxX - this.focusMinX;
+	var differenceTimeSeconds = Math.floor(differenceTimeMilliSeconds / 1000);
+	var differenceTimeMinutes = Math.floor(differenceTimeSeconds / 60);
+	var differenceTimeHours = Math.floor(differenceTimeMinutes / 60);
+	var differenceTimeDays = Math.floor(differenceTimeHours / 24);
+	var differenceTimeWeeks = Math.floor(differenceTimeDays / 7);
+	var differenceTimeMonths = Math.floor(differenceTimeDays / 4);
+	var differenceTimeYears = Math.floor(differenceTimeDays / 12);
+	
+	var areMilliSecondsGoodDivider = differenceTimeMilliSeconds > verticalGridLineCount;
+	var areSecondsGoodDivider = differenceTimeSeconds > verticalGridLineCount;
+	var areMinutesGoodDivider = differenceTimeMinutes > verticalGridLineCount;
+	var areHoursGoodDivider = differenceTimeHours > verticalGridLineCount;
+	var areDaysGoodDivider = differenceTimeDays > verticalGridLineCount;
+	var areWeeksGoodDivider = differenceTimeWeeks > verticalGridLineCount;
+	var areMonthsGoodDivider = differenceTimeMonths > verticalGridLineCount;
+	var areYearsGoodDivider = differenceTimeYears > verticalGridLineCount;
+	
+	this.xGridIncrement = 0;
+	this.xGridRestAdding = 0;
+	
+	var rest = 0;
+	this.xScaleTimeFormat = null;
+	if (!areMilliSecondsGoodDivider) {
+		//can't diplay vertical grid cause not enough values 
+		return;
+	} else if (!areSecondsGoodDivider) {
+		this.xGridIncrement = Math.floor(differenceTimeMilliSeconds / verticalGridLineCount);
+		rest = differenceTimeMilliSeconds % verticalGridLineCount;
+		this.xScaleTimeFormat = d3.time.format("%S");
+	} else if (!areMinutesGoodDivider) {
+		this.xGridIncrement = Math.floor(differenceTimeSeconds / verticalGridLineCount) * 1000;
+		rest = (differenceTimeSeconds % verticalGridLineCount) * 1000;
+		this.xScaleTimeFormat = d3.time.format("%M:%S");
+	} else if (!areHoursGoodDivider) {
+		this.xGridIncrement = Math.floor(differenceTimeMinutes / verticalGridLineCount) * 1000 * 60;
+		rest = (differenceTimeMinutes % verticalGridLineCount) * 1000 * 60;
+		this.xScaleTimeFormat = d3.time.format("%M");
+	} else if (!areDaysGoodDivider) {
+		this.xGridIncrement = Math.floor(differenceTimeHours / verticalGridLineCount) * 1000 * 60 * 60;
+		rest = (differenceTimeHours % verticalGridLineCount) * 1000 * 60 * 60;
+		this.xScaleTimeFormat = d3.time.format("%H:%M");
+	} else if (!areWeeksGoodDivider) {
+		this.xGridIncrement = Math.floor(differenceTimeDays / verticalGridLineCount) * 1000 * 60 * 60 * 24;
+		rest = (differenceTimeDays % verticalGridLineCount) * 1000 * 60 * 60 * 24;
+		this.xScaleTimeFormat = d3.time.format("%a");
+	} else if (!areMonthsGoodDivider) {
+		this.xGridIncrement = Math.floor(differenceTimeWeeks / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
+		rest = (differenceTimeWeeks % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7;
+		this.xScaleTimeFormat = d3.time.format("%W");
+	} else if (!areYearsGoodDivider) {
+		this.xGridIncrement = Math.floor(differenceTimeMonths / verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
+		rest = (differenceTimeMonths % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4;
+		this.xScaleTimeFormat = d3.time.format("%d %b");
+	} else {
+		this.xGridIncrement = Math.floor(differenceTimeYears / verticalGridLineCount)  * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
+		rest = (differenceTimeYears % verticalGridLineCount) * 1000 * 60 * 60 * 24 * 7 * 4 * 12;
+		this.xScaleTimeFormat = d3.time.format("%b %y");		
+	}
+	xGridValues = new Array();
+	this.xGridRestAdding = Math.floor(rest / verticalGridLineCount);
+	for (var i = 0; i < verticalGridLineCount; i++) {
+		var value = new Object();
+		value.id = i;
+		value.value = this.xFocus.invert(0) +  (this.xGridIncrement * i) + (this.xGridRestAdding * i);
+		xGridValues.push(value);
+	}
+
+	this.focusArea.selectAll("line.x-grid").remove();
+	this.focusArea.selectAll("line.x-grid")
+		.data(xGridValues, xGridId)
+		.enter()
+		.insert("svg:line")
+		.attr("class", "x-grid")
+		.attr("x1", function(d) {return chart.xFocus(d.value);})
+		.attr("x2", function(d) {return chart.xFocus(d.value);})
+		.attr("y1", this.y(this.focusMinY))
+		.attr("y2", this.y(this.focusMaxY));
+	
+	this.focusArea.selectAll("text.x-grid").remove();
+	this.focusArea.selectAll("text.x-grid")
+		.data(xGridValues, xGridId)
+		.enter()
+		.insert("svg:text")
+		.attr("class", "x-grid")
+		.style("font-family", "Verdana")
+		.style("font-size", "8px")
+		.style("text-anchor", "middle")
+		.attr("x", function(d) {return chart.xFocus(d.value);})
+		.attr("y", this.chartHeight + 10)
+		.text(function(d) {
+			if (!areSecondsGoodDivider) {
+				return chart.xScaleTimeFormat(new Date(d.value)) + "." + (d.value % 1000);
+			} else {
+				return chart.xScaleTimeFormat(new Date(d.value));
+			}
+		});
+
 	//
 	
 	var horizontalGridMinSpace = 60;
@@ -626,7 +618,8 @@ Chart.prototype.drawGrid = function() {
 		yValues.push(this.y(this.focusMinY) - (yIncrement * i) - (yRestAdding * i));
 	}
 	
-	this.focusArea.selectAll("line.y-grid")
+	this.focusArea.selectAll("line.y-grid").remove();
+	this.focusArea.selectAll("line.y-grid", "path")
 		.data(yValues)
 		.enter()
 		.insert("svg:line", "path")
@@ -635,6 +628,7 @@ Chart.prototype.drawGrid = function() {
 		.attr("x2", chart.xFocus(chart.focusMaxX))
 		.attr("y1", function(d) {return d;})
 		.attr("y2", function(d) {return d;});
+	this.focusArea.selectAll("text.y-grid").remove();
 	this.focusArea.selectAll("text.y-grid")
 		.data(yValues)
 		.enter()
@@ -652,54 +646,20 @@ Chart.prototype.drawGrid = function() {
 };
 
 Chart.prototype.showValues = function() {
-	if (this.isBarTypeChart || (this.chartMetrics.length == 0)) {
+	if (this.chartMetrics.length == 0) {
 		return;
 	}
-	//var xy = chart.xContext.invert(d3.svg.mouse(chart.active[0][0])[0]);
-	//chart.xx = chart.xContext.invert(d3.svg.mouse(this)[0]);
-	//console.debug(this.xFocus.invert(d3.svg.mouse(this.focusArea[0][0])[0]));
-	var x = this.xFocus.invert(d3.svg.mouse(this.focusArea[0][0])[0]);
-	if (x == this.lastX) {
-		return;
-	}
-	this.lastX = x;
 	var metrics = this.chartMetrics;
 	var dataValues = new Array();
 	for (var i = 0; i < metrics.length; i++) {
 		var metric = metrics[i];
-		var dataValue = null;
-		var mainDiff = Infinity;
-		for (var j = 0; j < metric.data.length; j++) {
-			var diff = Math.abs(x - metric.data[j].x);
-			if (diff < mainDiff) {
-				dataValue = metric.data[j];
-				mainDiff = diff;
-			}
-		}
+		var dataValue = metric.data[metric.data.length -1 - metric.pointsShifted];
 		dataValues.push(dataValue);
 		
 		d3.select("#" + validID(metric.metric) + "ValuePreviewLabel")
 			.text(shortTime(new Date(dataValue.x)) + " - " + metric.getFormattedValue(dataValue.y));
 	}
 
-	var chart = this;
-
-	/*
-	this.focusArea.selectAll("circle.value").remove();
-	this.focusArea.selectAll("circle.value")
-		.data(dataValues).enter()
-		.append("svg:circle")
-		.attr("class", "value")
-		.attr("cx", function(d) {
-			return chart.xFocus(d.x);
-		})
-		.attr("cy", function(d) {
-			return chart.y(d.y);
-		})
-		.attr("r", "2")
-		.style("fill", "red");
-	*/
-	
 };
 
 $(document).ready(function() {
@@ -723,7 +683,7 @@ $(document).ready(function() {
 	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#WaitCPULoad', 'Wait CPU Load', 'description', ':Percent', '%'));
 	chart1.loadChartData();
 	//chart1.displayChart();
-	chart1.legend.refreshLegend();
+	chart1.legend.refreshLegend(false);
 	chart1.valuePreview.refreshValuePreview();
 	
 	d3.select("#charts-dashboard").append("div").attr("id", "chart2")
@@ -733,7 +693,6 @@ $(document).ready(function() {
 		.style("top", ((chartsDashboardHeight - 2) / 2) + "px")
 		.style("left", 0 + "px");
 	
-	/**/
 	chart2 = new Chart("chart2", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	chart2.init(chartColors(2));
 	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformAllocatedMemory', 'Platform Allocated Memory.', 'description', ':Byte', 'b'));
@@ -744,7 +703,6 @@ $(document).ready(function() {
 	//chart2.displayChart();
 	chart2.legend.refreshLegend();
 	chart2.valuePreview.refreshValuePreview();
-	/**/
 	
 	setInterval(loadDataFct, 10000);
 	setInterval(refreshFct, 10000);

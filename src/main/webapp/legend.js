@@ -9,7 +9,7 @@ function Legend(chart) {
 	var mouseover = false;
 	var contentShow = true;
 	
-	this.refreshLegend = function () {
+	this.refreshLegend = function(allowDelete) {
 		var legendContainer = d3.select("#" + chart.id + "LegendContainer");
 		if (legendContainer.empty()) {
 			var chartSelection = d3.select("#" + this.chart.id);
@@ -76,15 +76,15 @@ function Legend(chart) {
 			div.append("span")
 				.attr("class", "metric-label")
 				.text(metric.metricLabel);
-			div.append("div")
-				.attr("id", validID(metric.metric) + "MetricLegendDelete")
-				.attr("data", i)
-				.attr("class", "legend-delete");
-			
-			$("#" + validID(metric.metric) + "MetricLegendDelete").click(function(eventObject) {
-				removeMetric(eventObject);
-			});
-
+			if (!(allowDelete == false)) {
+				div.append("div")
+					.attr("id", validID(metric.metric) + "MetricLegendDelete")
+					.attr("data", i)
+					.attr("class", "legend-delete");
+				$("#" + validID(metric.metric) + "MetricLegendDelete").click(function(eventObject) {
+					removeMetric(eventObject);
+				});
+			}
 		}
 	};
 
