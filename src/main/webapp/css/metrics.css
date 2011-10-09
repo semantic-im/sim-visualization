@@ -50,11 +50,18 @@ body {
   overflow: hidden;
 }
 
-#charts-dashboard {
-	position: absolute;
+#realtime-charts-dashboard {
+	position: relative;
 	border: 1px solid black;
 	overflow: auto;
 	z-index: -1;
+}
+
+#charts-dashboard {
+	position: relative;
+	border: 1px solid black;
+	overflow: auto;
+	/* z-index: -1; */
 }
 
 .chart {

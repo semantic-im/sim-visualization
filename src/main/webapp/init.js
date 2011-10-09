@@ -1,3 +1,5 @@
+var loadDataInterval, displayChartInterval;
+
 var	chartsDashboardHeight = clientHeight - 20,
 	chartsDashboardWidth = clientWidth - 20;
 var chartColors = d3.scale.category10();
@@ -22,8 +24,17 @@ var CHART_MIN_POINTS = 50; //the number of points to use for chart
 var MAX_POINTS_FROM_BUFFER = 5;//the maximum points to read from the buffer of data
 var xGridValues = new Array();
 
-function Metric(id, label, description, unit, unitLabel) {
+Metric.SYSTEM = "SystemType";
+Metric.PLATFORM = "PlatformType";
 
+REALTIME_CHART_TRANSITION_DURATION = 5000;
+REALTIME_CHART_DISPLAY_UPDATE = 5000;
+REALTIME_CHART_LOAD_DATA_INTERVAL = 5000;
+
+function RealtimeMetric(id, type, label, description, unit, unitLabel) {
+
+	this.metricType = type;
+	
 	this.metric = id;
 	this.metricLabel = label;
 	this.method = null;
@@ -100,7 +111,7 @@ function Metric(id, label, description, unit, unitLabel) {
 	
 }
 
-function Chart(id, width, height) {
+function RealtimeChart(id, width, height) {
 	this.id = id;
 	
 	this.fill = d3.scale.category20();
@@ -156,7 +167,7 @@ function Chart(id, width, height) {
 	
 }
 
-Chart.prototype.init = function(color) {
+RealtimeChart.prototype.init = function(color) {
 	var chart = this;
 	
 	d3.select("#" + chart.id).on("mousemove", function() {
@@ -197,7 +208,7 @@ Chart.prototype.init = function(color) {
 	this.valuePreview = new ValuePreview(this);
 };
 
-Chart.prototype.processData = function(metric, data) {
+RealtimeChart.prototype.processData = function(metric, data) {
 	var newData = new Array();
 	var metricType = metric.type();
 	var lastValue = 0;
@@ -226,13 +237,13 @@ Chart.prototype.processData = function(metric, data) {
 	return newData;
 };
 
-Chart.prototype.addMetricToChart = function(metric) {
+RealtimeChart.prototype.addMetricToChart = function(metric) {
 	metric.fill = this.fill(metric.metric);
 	this.chartMetrics.push(metric);
 };
 
 
-Chart.prototype.loadChartData = function() {
+RealtimeChart.prototype.loadChartData = function() {
 	var metrics = this.chartMetrics;
 	for (var i = 0; i < metrics.length; i++) {
 		metrics[i].loaded = false;
@@ -240,40 +251,36 @@ Chart.prototype.loadChartData = function() {
 	};
 };
 
-Chart.prototype.loadData = function(index, metric) {
+RealtimeChart.prototype.loadData = function(index, metric) {
 	var sparql = null;
-	if (metric.data.length == 0 && metric.bufferData.length == 0) {
-		sparql = "select ?metricid ?timestamp ?value "
-				+ "	where { "
-				+ "		?metricid rdf:type <" + metric.metric + "> ."
-				+ "		?metricid :hasTimeStamp ?timestamp ."
-				+ "		?metricid :hasDataValue ?value ."
-				+ "	} "
-				+ "order by DESC(?timestamp) "
-				+ "LIMIT " + CHART_MIN_POINTS + " OFFSET 0";
-	} else {
+	sparql = "select ?metricid ?timestamp ?value "
+		+ "	where { "
+		+ "		?metricid rdf:type <" + metric.metric + "> ."
+		+ "		?metricid :hasTimeStamp ?timestamp ."
+		+ "		?metricid :hasDataValue ?value .";
+	if (metric.metricType != Metric.SYSTEM) {
+		sparql = sparql + "		" + selectedApplication.id + " :hasMeasurement ?metricid .";
+	}
+	sparql = sparql + "		" + selectedSystem.id + " :hasMeasurement ?metricid .";
+	if (metric.data.length != 0 || metric.bufferData.length != 0) {
 		var timeFilter = null;
 		if (metric.bufferData.length != 0) {
 			timeFilter = time(new Date(metric.bufferData[metric.bufferData.length - 1].x));
 		} else {
 			timeFilter = time(new Date(metric.data[metric.data.length - 1].x));
 		}
-		sparql = "select ?metricid ?timestamp ?value "
-			+ "	where { "
-			+ "		?metricid rdf:type <" + metric.metric + "> ."
-			+ "		?metricid :hasTimeStamp ?timestamp ."
-			+ "		?metricid :hasDataValue ?value ."
-			+ "     FILTER (?timestamp > xsd:dateTime(\"" + timeFilter + "\"))"
-			+ "	} "
-			+ "order by DESC(?timestamp) "
-			+ "LIMIT " + CHART_MIN_POINTS + " OFFSET 0";		
+		sparql = sparql + "		" + selectedSystem.id + " :hasMeasurement ?metricid ."
+			+ "     FILTER (?timestamp > xsd:dateTime(\"" + timeFilter + "\"))";
 	}
+	sparql = sparql + "	} "
+		+ "order by DESC(?timestamp) "
+		+ "LIMIT " + CHART_MIN_POINTS + " OFFSET 0";
 	var chart = this;
 	executeSparql([ "metricid", "timestamp", "value" ], sparql, true, function(data) {chart.treatData(index, data);});
 	setTimeout(function() {chart.checkAllDataLoadedFct();}, 500);
 };
 
-Chart.prototype.checkAllDataLoadedFct = function() {
+RealtimeChart.prototype.checkAllDataLoadedFct = function() {
 	var metrics = this.chartMetrics;
 	var chart = this;
 	var notLoaded = false;
@@ -294,7 +301,7 @@ Chart.prototype.checkAllDataLoadedFct = function() {
 	}
 };
 
-Chart.prototype.treatData = function(index, data) {
+RealtimeChart.prototype.treatData = function(index, data) {
 	var metrics = this.chartMetrics;
 	data = this.processData(metrics[index], data);
 	for (var i = 0; i < data.length; i++) {
@@ -317,7 +324,7 @@ Chart.prototype.treatData = function(index, data) {
 	metrics[index].loaded = true;
 };
 
-Chart.prototype.displayChart = function() {
+RealtimeChart.prototype.displayChart = function() {
 	var metrics = this.chartMetrics;
 	for (var i = 0; i < metrics.length; i++) {
 		metrics[i].pointsShifted = 0;
@@ -345,7 +352,7 @@ Chart.prototype.displayChart = function() {
 	this.drawGrid();
 };
 
-Chart.prototype.computeScales = function() {
+RealtimeChart.prototype.computeScales = function() {
 	this.minX = Infinity;
 	this.maxX = -Infinity;
 	this.minY = Infinity;
@@ -375,7 +382,7 @@ Chart.prototype.computeScales = function() {
 	this.focusMaxX = this.maxX;
 };
 
-Chart.prototype.drawMetric = function(metric) {
+RealtimeChart.prototype.drawMetric = function(metric) {
 	var chart = this;
 	var multipleMetrics = (chart.chartMetrics.length > 1);
 	
@@ -417,7 +424,7 @@ Chart.prototype.drawMetric = function(metric) {
 			.attr("d", line)
 			.transition()
 			.ease("linear")
-			.duration(10000)
+			.duration(REALTIME_CHART_TRANSITION_DURATION)
 			.attr("transform", "translate(0)");
 		/*
 		this.focusArea.selectAll("circle.value")
@@ -438,7 +445,7 @@ Chart.prototype.drawMetric = function(metric) {
 
 };
 
-Chart.prototype.drawChart = function() {
+RealtimeChart.prototype.drawChart = function() {
 	var chart = this;
 	
 	//this.focusArea.selectAll("circle.value").remove();
@@ -488,7 +495,7 @@ Chart.prototype.drawChart = function() {
 
 };
 
-Chart.prototype.getYLabel = function(value) {
+RealtimeChart.prototype.getYLabel = function(value) {
 	var metrics = this.chartMetrics;
 	if (metrics.length == 0) {
 		return "";
@@ -501,7 +508,7 @@ function xGridId(d) {
 	return d.id;
 }
 
-Chart.prototype.drawGrid = function() {
+RealtimeChart.prototype.drawGrid = function() {
 	var verticalGridMinSpace = 120;
 	var chart = this;
 	
@@ -645,7 +652,7 @@ Chart.prototype.drawGrid = function() {
 
 };
 
-Chart.prototype.showValues = function() {
+RealtimeChart.prototype.showValues = function() {
 	if (this.chartMetrics.length == 0) {
 		return;
 	}
@@ -662,58 +669,63 @@ Chart.prototype.showValues = function() {
 
 };
 
-$(document).ready(function() {
-	d3.select("#charts-dashboard")
+function startRealtimeCharts() {
+	d3.select("#realtime-charts-dashboard")
 		.style("width", chartsDashboardWidth + "px")
 		.style("height", chartsDashboardHeight + "px")
-		.style("top", 20 + "px")
+		.style("top", 2 + "px")
 		.style("left", 2 + "px");
 
-	d3.select("#charts-dashboard").append("div").attr("id", "chart1")
+	d3.select("#realtime-charts-dashboard").append("div").attr("id", "realtime_chart1")
 		.attr("class", "chart")
 		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
 		.style("width", (chartsDashboardWidth - 2) + "px");
 		//.style("display", "inline-block");
 	
-	chart1 = new Chart("chart1", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
+	chart1 = new RealtimeChart("realtime_chart1", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	chart1.init(chartColors(1));
-	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#SystemCPULoad', 'System CPU Load', 'description', ':Percent', '%'));
-	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#UserCPULoad', 'User CPU Load', 'description', ':Percent', '%'));
-	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#IdleCPULoad', 'Idle CPU Load', 'description', ':Percent', '%'));
-	chart1.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#WaitCPULoad', 'Wait CPU Load', 'description', ':Percent', '%'));
+	chart1.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#SystemCPULoad', Metric.SYSTEM, 'System CPU Load', 'description', ':Percent', '%'));
+	chart1.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#UserCPULoad', Metric.SYSTEM, 'User CPU Load', 'description', ':Percent', '%'));
+	chart1.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#IdleCPULoad', Metric.SYSTEM, 'Idle CPU Load', 'description', ':Percent', '%'));
+	chart1.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#WaitCPULoad', Metric.SYSTEM, 'Wait CPU Load', 'description', ':Percent', '%'));
 	chart1.loadChartData();
 	//chart1.displayChart();
 	chart1.legend.refreshLegend(false);
 	chart1.valuePreview.refreshValuePreview();
 	
-	d3.select("#charts-dashboard").append("div").attr("id", "chart2")
+	d3.select("#realtime-charts-dashboard").append("div").attr("id", "realtime_chart2")
 		.attr("class", "chart")
 		.style("height", ((chartsDashboardHeight - 4) / 2) + "px")
 		.style("width", (chartsDashboardWidth - 2) + "px")
 		.style("top", ((chartsDashboardHeight - 2) / 2) + "px")
 		.style("left", 0 + "px");
 	
-	chart2 = new Chart("chart2", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
+	chart2 = new RealtimeChart("realtime_chart2", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	chart2.init(chartColors(2));
-	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformAllocatedMemory', 'Platform Allocated Memory.', 'description', ':Byte', 'b'));
-	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformFreeMemory', 'Platform Free Memory.', 'description', ':Byte', 'b'));
-	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUnallocatedMemory', 'Platform Unallocated Memory.', 'description', ':Byte', 'b'));
-	chart2.addMetricToChart(new Metric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUsedMemory', 'Platform Used Memory.', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformAllocatedMemory', Metric.PLATFORM, 'Platform Allocated Memory.', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformFreeMemory', Metric.PLATFORM, 'Platform Free Memory.', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUnallocatedMemory', Metric.PLATFORM, 'Platform Unallocated Memory.', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUsedMemory', Metric.PLATFORM, 'Platform Used Memory.', 'description', ':Byte', 'b'));
 	chart2.loadChartData();
 	//chart2.displayChart();
-	chart2.legend.refreshLegend();
+	chart2.legend.refreshLegend(false);
 	chart2.valuePreview.refreshValuePreview();
 	
-	setInterval(loadDataFct, 10000);
-	setInterval(refreshFct, 10000);
-});
+	loadDataInterval = setInterval(loadDataFct, REALTIME_CHART_LOAD_DATA_INTERVAL);
+	displayChartInterval = setInterval(displayChartFct, REALTIME_CHART_DISPLAY_UPDATE);
+};
+
+function stopRealtimeCharts() {
+	clearInterval(loadDataInterval);
+	clearInterval(displayChartInterval);
+}
 
 var loadDataFct = function() {
 	chart1.loadChartData();
 	chart2.loadChartData();	
 };
 
-var refreshFct = function() {
+var displayChartFct = function() {
 	chart1.displayChart();
 	chart2.displayChart();	
 };

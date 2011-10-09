@@ -20,6 +20,7 @@ function Metric(model) {
 
 	this.metric = model.id;
 	this.metricLabel = model.label;
+	this.superType = model.superType;
 	this.method = null;
 	this.methodLabel = null;
 	if (model.method) {
@@ -491,9 +492,15 @@ function computeFocusData(chart, metric, isBarTypeChart) {
 }
 
 Chart.prototype.createMetricJsonParameter = function(metric) {
-	var result = "{" + "metric:'" + metric.metric + "'";
+	var result = "{" + "metric:'" + metric.metric + "'" + ", superType:'" + metric.superType + "'";
 	if (metric.method) {
 		result = result + ", method:'" + metric.method + "'";
+	}
+	if (selectedApplication) {
+		result = result + ", application:'" + selectedApplication.id + "'";
+	}
+	if (selectedSystem) {
+		result = result + ", system:'" + selectedSystem.id + "'";
 	}
 	return result + "}";
 };

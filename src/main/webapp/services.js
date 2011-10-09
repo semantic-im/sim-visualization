@@ -38,11 +38,11 @@ function executeSparql(selectVariableNames, sparql, async, callback) {
 		s = s + "'" + selectVariableNames[i] + "'";
 	}
 	s = s + "]";
-	if (async) {
-		ajaxCall("query", callback, "{select-variable-names:" + s + ", sparql:'" + sparql + "'}", async);
+	if (async == true) {
+		ajaxCall("query", callback, "{select-variable-names:" + s + ", sparql:'" + sparql + "'}", true);
 	} else {
 		var theResult = null;
-		ajaxCall("query", function(result) {theResult = result;}, "{select-variable-names:" + s + ", sparql:'" + sparql + "'}", async);
+		ajaxCall("query", function(result) {theResult = result;}, "{select-variable-names:" + s + ", sparql:'" + sparql + "'}", false);
 		return theResult;
 	}
 }

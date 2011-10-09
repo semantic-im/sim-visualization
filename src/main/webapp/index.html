@@ -37,15 +37,130 @@
     <script type="text/javascript" src="arrowhead.js"></script>
     <link type="text/css" rel="stylesheet" href="./jquery.ui/themes/base/jquery.ui.all.css"/>
     <link type="text/css" rel="stylesheet" href="./css/metrics.css"/>
+    <link type="text/css" rel="stylesheet" href="visualization.css"/>
   </head>
   <body>
+   	<script type="text/javascript" src="index.js"></script>
    	<script type="text/javascript" src="main.js"></script>
    	<script type="text/javascript" src="legend.js"></script>
    	<script type="text/javascript" src="value-preview.js"></script>
+   	<script type="text/javascript" src="context-graph.js"></script>
+   	<script type="text/javascript" src="chart-settings.js"></script>
+   	<script type="text/javascript" src="chart.js"></script>
+   	<script type="text/javascript" src="chart-bar.js"></script>
    	<script type="text/javascript" src="init.js"></script>
-   	
-   	<a href="visualization.html">Ontology Browse</a>&nbsp;<a href="metrics.html">Metric Charts</a>
-    <div id="charts-dashboard">
-    </div>
+	<script type="text/javascript" src="metrics.js"></script>
+	<script type="text/javascript" src="nodeactions.js"></script>
+	<script type="text/javascript" src="visualization.js"></script>
+
+	<div id="applicationSystemToolbar" style="display: none; background-color: #DDB9B9; margin: 2px; padding-bottom: 2px; padding-left: 2px;">
+		<span style="font-family: Verdana; font-size: 10px; font-weight: bold;">Application:&nbsp;</span><span id="selectedApplication" style="font-family: Verdana; font-size: 10px;"></span>
+		<span style="font-family: Verdana; font-size: 10px; font-weight: bold;">System:&nbsp;</span><span id="selectedSystem" style="font-family: Verdana; font-size: 10px;"></span>
+		<span style="font-family: Verdana; font-size: 10px; font-weight: bold;">Total Memory:&nbsp;</span><span id="selectedSystemTotalMemory" style="font-family: Verdana; font-size: 10px;"></span>
+		<span style="font-family: Verdana; font-size: 10px; font-weight: bold;">CPU Count:&nbsp;</span><span id="selectedSystemCpuCount" style="font-family: Verdana; font-size: 10px;"></span>
+		<input id="changeApplicationSystem" type="submit" value="Change"/>
+	</div>
+	
+	<div id="applicationSystemSelection" style="text-align: center;">
+		<h1 style="text-align: center;">SIM Visualization Tool</h1>
+		<h5>Application &amp; System Selection</h5>
+		<div style="display: block;">
+			<div style="display: inline-block; text-align: left;">
+				<div style="display: inline-block; width: 140px;">Application:</div><select id="applications"></select>
+				<br/>
+				<div style="display: inline-block; width: 140px;">System:</div><select id="systems"></select>
+			</div>
+			<br/><br/><br/>
+			<input id="toRealtimeCharts" type="submit" value="To Realtime Charts"/>
+			<input id="toMetricCharts" type="submit" value="To Metrics Charts"/>
+			<input id="toOntologyGraph" type="submit" value="To Ontology Graph"/>
+		</div>
+	</div>
+	
+	<div id="realTimeCharts" style="display: none;">
+	    <div id="realtime-charts-dashboard">
+	    </div>
+	</div>
+	
+	<div id="metricCharts" style="display: none;">
+	    <div id="metrics-selector">
+	    	<div id="metrics-selector-toggle">
+	    	</div>
+	    	<div id="metrics-selector-slider">
+	    	</div>
+	    	<div id="metrics-selector-scroll">
+	    		<div id="metrics-selector-content">
+			    	<div id="display-settings">
+			    		<span class="metrics-title metrics-title-label">Display settings</span>
+			    	</div>
+			    	<br/>
+			    	<div id="system-metrics-selector">
+			    		<span class="metrics-title metrics-title-label">System Metrics</span>
+			    	</div>
+			    	<br/>
+			    	<div id="method-metrics-selector">
+			    		<span class="metrics-title metrics-title-label">Method Metrics</span>
+			    	</div>
+			    	<br/>
+			    	<div id="platform-metrics-selector">
+			    		<span class="metrics-title metrics-title-label">Platform Metrics</span>
+			    	</div>
+			    	<br/>
+			    	<!-- div id="compound-metrics-selector">
+			    		<span class="metrics-title metrics-title-label">Compound Metrics</span>
+			    	</div>
+			    	<br/ -->
+			    	<div id="atomic-plugin-metrics-selector">
+			    		<span class="metrics-title metrics-title-label">Atomic Plugin Metrics</span>
+			    	</div>
+			    	<br/>
+			    	<div id="atomic-query-metrics-selector">
+			    		<span class="metrics-title metrics-title-label">Atomic Query Metrics</span>
+			    	</div>
+			    	<br/>
+			    	<div id="atomic-workflow-metrics-selector">
+			    		<span class="metrics-title metrics-title-label">Atomic Workflow Metrics</span>
+			    	</div>
+			    </div>
+		    </div>
+	    </div>
+	    
+	    <div id="charts-dashboard">
+	    	<div id="chartSettings" style="display: none">
+	    		From date: <input type="text" id="fromDate">
+	    		<div>
+		    		<div style="display: inline-block; width:140px;">
+		    			<label for="fromTime">From time: </label><input type="text" id="fromTime" style="border:0; color:#f6931f; font-weight:bold;">
+		    		</div>
+		    		<div id="fromTimeSlider" style="display: inline-block; width: 300px;"></div><br/>
+		    	</div>
+	    		To date: <input type="text" id="toDate">
+	    		<div>
+		    		<div style="display: inline-block; width:140px;">
+		    			<label for="toTime">To time: </label><input type="text" id="toTime" style="border:0; color:#f6931f; font-weight:bold;">
+		    		</div>
+		    		<div id="toTimeSlider" style="display: inline-block; width: 300px;"></div>
+	    		</div>
+	    	</div>
+	    	
+	    	<div id="contextGraphDialog">
+	    	</div>
+	    	
+	    </div>
+	    <div id="metricInstances" style="position: absolute; display: none; z-index: 999;"></div>
+	</div>
+	
+	<div id="ontologyGraph" style="display: none;">
+	    <div id="ontoview" style="position: absolute;">
+	    	<!-- button class="first last" onclick="transition()">Update</button -->
+	    </div>
+	    <div id="chart-container" style="position: absolute; display: none;">
+	    	<div id="chart-metrics" style="position: absolute;"">
+	    	</div>
+		   	<div id="chart" style="position: absolute;"">
+		   	</div>
+		</div>
+	</div>
+	
   </body>
 </html>

@@ -639,3 +639,7 @@ function drawTriangle(canvas) {
 	context.closePath();
 	context.fill();		
 }
+
+function trimDatatype(value) {
+	return value.substr(0, value.indexOf("^^"));
+}

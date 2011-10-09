@@ -66,21 +66,31 @@ public class MetricResource extends ServerResource {
 	public Representation post(Representation entity) throws ResourceException {
 		try {
 			String nodeMetric = null;
+			String superType = null;
 			String nodeMethod = null;
+			String application = null;
+			String system = null;
 			if (entity != null) {
 				String text = entity.getText();
 				JsonRepresentation represent = new JsonRepresentation(text);
 				JSONObject jsonObject = represent.getJsonObject();
 				nodeMetric = jsonObject.getString("metric");
-				if (jsonObject.has("method")) {
+				superType = jsonObject.getString("superType");
+				if (superType.equals(":MethodMetric")) {
 					nodeMethod = jsonObject.getString("method");
+				}
+				if (jsonObject.has("application")) {
+					application = jsonObject.getString("application");
+				}
+				if (jsonObject.has("system")) {
+					system = jsonObject.getString("system");
 				}
 				System.out.println(nodeMetric);
 			}
 
 			getResponse().setStatus(Status.SUCCESS_ACCEPTED);
 
-			JSONArray data = metricData(nodeMetric, nodeMethod);
+			JSONArray data = metricData(nodeMetric, superType, nodeMethod, application, system);
 
 			Representation rep = new JsonRepresentation(data);
 
@@ -94,20 +104,27 @@ public class MetricResource extends ServerResource {
 		return null;
 	}
 
-	private String getQuery(String metric, String method) {
+	private String getQuery(String metric, String superType, String method, String application, String system) {
 		StringBuilder query = new StringBuilder();
 		query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/prefixes.sparql")));
-		if (method == null) {
+		if (superType.equals(":SystemMetric")) {
 			query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/system-metric.sparql")));
-		} else {
+		} else if (superType.equals(":MethodMetric")) {
 			query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/method-metric.sparql")));
+		} else {
+			query.append(ModelUtil.readSparqlFile(this.getClass().getResource("/other-metric.sparql")));
 		}
 
 		ModelUtil.replaceParameters(query, "$metric$", metric);
 		if (method != null) {
 			ModelUtil.replaceParameters(query, "$method$", method);
 		}
-		
+		if (application != null) {
+			ModelUtil.replaceParameters(query, "$application$", application);
+		}
+		if (application != null) {
+			ModelUtil.replaceParameters(query, "$system$", system);
+		}
 		return query.toString();
 	}
 
@@ -121,12 +138,12 @@ order by desc (?date)
 limit 10
 	 */
 
-	public JSONArray metricData(String nodeMetric, String nodeMethod) throws JSONException {
+	public JSONArray metricData(String nodeMetric, String superType, String nodeMethod, String application, String system) throws JSONException {
 		Model model = ModelUtil.openModel();
 
 		JSONArray jsonArray = new JSONArray();
 
-		QueryResultTable qrt = model.sparqlSelect(getQuery(nodeMetric, nodeMethod));
+		QueryResultTable qrt = model.sparqlSelect(getQuery(nodeMetric, superType, nodeMethod, application, system));
 		ClosableIterator<QueryRow> it = qrt.iterator();
 		while (it.hasNext()) {
 			QueryRow qr = it.next();

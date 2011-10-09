@@ -1,3 +1,6 @@
+function OntologyGraph() {
+	
+
 var INITIAL_VISIBLE_DEPTH = 1;
 
 var nodes, links;
@@ -72,8 +75,9 @@ function draw() {
 	if (force) force.stop();
 	
 	force = d3.layout.force()
-		.charge(-500)
+		.charge(-300)
 		.distance(80)
+		//.gravity(0)
 		.nodes(nodes)
 		.links(links)
 		.size([clientWidth, clientHeight])
@@ -153,7 +157,7 @@ function start() {
 		.transition()
 		.duration(1000)
 		.style("opacity", 1);
-};
+}
 
 function displayExpandSigns(nodeData) {
 	nodeData.select("g.sign").remove();
@@ -446,4 +450,6 @@ function implodeChildLink(node, childLink) {
 	}
 	node.links.remove(childLink);
 	newNode.isChildCount = newNode.isChildCount - 1;	
+}
+
 }

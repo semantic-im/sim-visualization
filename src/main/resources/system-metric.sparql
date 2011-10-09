@@ -4,6 +4,7 @@ select ?metricid ?timestamp ?value
 			?metricid rdf:type $metric$ .
 			?metricid :hasTimeStamp ?timestamp .
 			?metricid :hasDataValue ?value .
+			$system$ :hasMeasurement ?metricid.
 		}
 	}
 order by ?timestamp

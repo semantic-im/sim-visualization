@@ -1,11 +1,9 @@
-select ?metricid ?timestamp ?value ?methodExecution
+select ?metricid ?timestamp ?value
 	where {
 		{
 			?metricid rdf:type $metric$ .
 			?metricid :hasTimeStamp ?timestamp .
 			?metricid :hasDataValue ?value .
-			?methodExecution :hasMeasurement ?metricid .
-			?methodExecution :isMethodExecutionOf $method$ .
 			$application$ :hasMeasurement ?metricid.
 			$system$ :hasMeasurement ?metricid.
 		}

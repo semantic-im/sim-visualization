@@ -72,7 +72,7 @@ function ContextGraph(metric, metricId) {
 		if (this.force) this.force.stop();
 		
 		this.force = d3.layout.force()
-			.charge(-500)
+			.charge(-300)
 			.distance(80)
 			.nodes(this.nodes)
 			.links(this.links)
@@ -437,7 +437,7 @@ function ContextGraph(metric, metricId) {
 		if (metricNode.loaded) {
 			return;
 		}
-		var sparql = "select ?time ?value ?unit ?method"
+		var sparql = "select ?time ?value ?unit ?method ?application ?applicationName ?system ?systemName "
 				+ "	where { "
 				+ "		?MetricInstance :hasContext " + contextNode.name + " .\\n"
 				+ "		?MetricInstance rdf:type " + metricNode.name + " .\\n"
@@ -446,15 +446,30 @@ function ContextGraph(metric, metricId) {
 				+ " " + metricNode.name + " :hasMeasurementUnit ?unit .\\n"
 				+ "		OPTIONAL {?methodExecution :hasMeasurement ?MetricInstance . \\n"
 				+ "               ?methodExecution :isMethodExecutionOf ?method} \\n"
+				+ "     OPTIONAL {?application :hasMeasurement ?MetricInstance . \\n"
+				+ "               ?application rdf:type :Application . \\n"
+				+ "               ?application :hasName ?applicationName} \\n"
+				+ "     OPTIONAL {?system :hasMeasurement ?MetricInstance . \\n"
+				+ "               ?system rdf:type :System . \\n"
+				+ "               ?system :hasName ?systemName} \\n"
 				+ "	} \\n"
-				+ "order by ?time ";
+				+ "order by ?application ?system ?time ";
 
-		executeSparql([ "time", "value", "unit", "method" ], sparql, true, function(data) {contextGraph.treatMetricInstances(contextNode, metricNode, data);});
+		executeSparql([ "time", "value", "unit", "method", "application", "applicationName", "system", "systemName" ], sparql, true, function(data) {contextGraph.treatMetricInstances(contextNode, metricNode, data);});
 	};
 	
 	this.treatMetricInstances = function(contextNode, metricNode, data) {
 		metricNode.instances = new Array();
 		for (var i = 0; i < data.length; i++) {
+			if (i ==0 || ((data[i-1].application + data[i-1].system) != (data[i].application + data[i].system))) {
+				if (data[i].application || data[i].system) {
+					var obj = new Object();
+					obj.title = true;
+					obj.application = data[i].applicationName;
+					obj.system = data[i].systemName;
+					metricNode.instances.push(obj);
+				}
+			}
 			var obj = new Object();
 			obj.time = data[i].time;
 			obj.value = data[i].value;
@@ -649,16 +664,28 @@ function ContextGraph(metric, metricId) {
 		//compute value label
 		for (var i = 0; i < d.instances.length; i++) {
 			var instance = d.instances[i];
-			var timeFormat = d3.time.format("%d.%m.%y %H:%M:%S");
-			var timeFormat1 = d3.time.format("%Y-%m-%dT%H:%M:%S");
-			var timeValue = instance.time.substr(0, instance.time.indexOf("^^"));
-			var value = instance.value;
-			if (instance.value.indexOf("^^") != -1) {
-				value = instance.value.substr(0, instance.value.indexOf("^^"));
-			}
-			instance.label = "Time: " + timeFormat(timeFormat1.parse(timeValue)) + ", Value: " + getFormattedValue(value, instance.unit);
-			if (instance.method != '') {
-				instance.label = instance.label + ", " + "Method: " + instance.method.substr(1);
+			if (instance.title == true) {
+				if (instance.application) {
+					instance.label = "Application: " + instance.application;
+				}
+				if (instance.system) {
+					if (instance.label.length != 0) {
+						instance.label = instance.label + ", ";
+					}
+					instance.label = instance.label + "System: " + instance.system;
+				}
+			} else {
+				var timeFormat = d3.time.format("%d.%m.%y %H:%M:%S");
+				var timeFormat1 = d3.time.format("%Y-%m-%dT%H:%M:%S");
+				var timeValue = instance.time.substr(0, instance.time.indexOf("^^"));
+				var value = instance.value;
+				if (instance.value.indexOf("^^") != -1) {
+					value = instance.value.substr(0, instance.value.indexOf("^^"));
+				}
+				instance.label = "Time: " + timeFormat(timeFormat1.parse(timeValue)) + ", Value: " + getFormattedValue(value, instance.unit);
+				if (instance.method != '') {
+					instance.label = instance.label + ", " + "Method: " + instance.method.substr(1);
+				}
 			}
 			if (instance.label.length > maxLengthLabel) {
 				maxLengthLabel = instance.label.length;
@@ -697,6 +724,13 @@ function ContextGraph(metric, metricId) {
 			.attr("y", function(data, i) {return (d.y + ((i + 1) * 10) + 2) + "px";})
 			.attr("font-family", "Verdana")
 			.attr("font-size", "10")
+			.attr("font-weight", function(d) {
+				if (d.title == true) {
+					return "bold";
+				} else {
+					return "normal";
+				}
+			})
 			.attr("stroke-width", "0px")
 			.attr("fill", "black")
 			.attr("fill-opacity", "0.8")

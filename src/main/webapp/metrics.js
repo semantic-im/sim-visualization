@@ -39,7 +39,7 @@ function drawCloseIcon() {
 	context.fill();		
 }
 
-$(document).ready(function() {
+function startMetricCharts() {
 	var metricsSelectorHeight = (clientHeight - clientHeight * 0.1);
 	var metricsSelectorPaddingHeight = 10;
 	var metricsSelectorWidth = 360;
@@ -483,7 +483,7 @@ $(document).ready(function() {
 		.style("left", 2 + "px");
 	
 	displayChart1x1();
-});
+};
 
 function displayMethods(event) {
 	var dataIndex = d3.select("#" + event.target.id).attr("data");
@@ -763,7 +763,11 @@ function getMetrics(superType) {
 			+ "  } \\n"
 			+ "order by ?label ";
 
-	return executeSparql([ "id", "label", "description", "unit" ], sparql, false);
+	var data = executeSparql([ "id", "label", "description", "unit" ], sparql, false);
+	for (var i = 0; i < data.length; i++) {
+		data[i].superType = superType;
+	}
+	return data;
 }
 
 function getMethods() {
