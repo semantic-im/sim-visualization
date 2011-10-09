@@ -17,9 +17,9 @@ function Legend(chart) {
 			legendContainer = chartSelection.append("div")
 				.attr("id", this.chart.id + "LegendContainer")
 				.style("top", 10 + "px")
-				.style("left", (legendTitleLeft - 220) + "px")
+				.style("left", (legendTitleLeft - 350) + "px")
 				.style("height", 100 + "px")
-				.style("width", (220) + "px") //padding
+				.style("width", (350) + "px") //padding
 				.on("mouseup", unmoveService);
 			legendContainer.classed("legend-container", true);
 			//$( "#" + chart.id + "LegendContainer" ).draggable();
@@ -27,7 +27,7 @@ function Legend(chart) {
 			var legendTitle = legendContainer.append("div")
 				.attr("id", this.chart.id + "LegendTitle")
 				.style("top", 0 + "px")
-				.style("left", 140 + "px")
+				.style("left", 270 + "px")
 				.style("height", 20 + "px")
 				.style("width", 76 + "px")
 				.style("text-align", "center")
@@ -55,7 +55,7 @@ function Legend(chart) {
 				.style("top", (20 + 2*2 + 1) + "px") //2*2 padding
 				.style("left", 0 + "px")
 				.style("height", 80 + "px")
-				.style("width", (220) + "px") //padding
+				.style("width", (350) + "px") //padding
 				.on("mouseover", legendMouseover)
 				.on("mouseout", legendMouseout);
 		}
@@ -73,9 +73,18 @@ function Legend(chart) {
 				.attr("height", "16")
 				.attr("class", "metric-icon");
 			drawCircle($('#' + validID(metric.metric) + "LegendIcon")[0], 8, metric.fill);
-			div.append("span")
+			var textDiv = div.append("div")
+				.style("width", "310px")
+				.style("display", "inline-block");
+			textDiv.append("span")
 				.attr("class", "metric-label")
 				.text(metric.metricLabel);
+			textDiv.append("span")
+				.text(":");
+			textDiv.append("span")
+				.attr("id", validID(metric.metric) + "ValuePreviewLabel")
+				.attr("class", "metric-label")
+				.text("N/A");
 			if (!(allowDelete == false)) {
 				div.append("div")
 					.attr("id", validID(metric.metric) + "MetricLegendDelete")

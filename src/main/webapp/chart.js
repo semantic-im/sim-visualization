@@ -199,7 +199,7 @@ function Chart(id, width, height) {
 	
 	this.legend;
 	
-	this.valuePreview;
+	//this.valuePreview;
 	
 	this.mouseMoveHandlers = new Array();
 	
@@ -290,7 +290,7 @@ Chart.prototype.init = function(color) {
 		.text("DROP HERE!");
 
 	this.focusArea = this.chartSvgArea.append("svg:g")
-		.attr("id", "focusArea")
+		.attr("id", validID(this.id + "FocusArea"))
 		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
 	
 	this.context = this.chartSvgArea.append("svg:g")
@@ -298,7 +298,7 @@ Chart.prototype.init = function(color) {
 	
 	this.legend = new Legend(this);
 	
-	this.valuePreview = new ValuePreview(this);
+	//this.valuePreview = new ValuePreview(this);
 };
 
 Chart.prototype.updateFocusData = function(isBarTypeChart) {
@@ -538,7 +538,7 @@ Chart.prototype.addMetricToChart = function(metric) {
 	this.chartMetrics.push(metric);
 	this.displayChart();
 	this.legend.refreshLegend();
-	this.valuePreview.refreshValuePreview();
+	//this.valuePreview.refreshValuePreview();
 };
 
 Chart.prototype.removeMetric = function(metric) {
@@ -555,7 +555,7 @@ Chart.prototype.removeMetric = function(metric) {
 	this.chartMetrics.splice(index, 1);
 	this.displayChart();
 	this.legend.refreshLegend();
-	this.valuePreview.refreshValuePreview();
+	//this.valuePreview.refreshValuePreview();
 };
 
 Chart.prototype.displayChart = function() {
@@ -979,7 +979,7 @@ Chart.prototype.showValues = function() {
 		dataValues.push(dataValue);
 		
 		d3.select("#" + validID(metric.metric) + "ValuePreviewLabel")
-			.text(shortTime(new Date(dataValue.x)) + " - " + metric.getFormattedValue(dataValue.y));
+			.text(shortTime(new Date(dataValue.x)) + ", " + metric.getFormattedValue(dataValue.y));
 	}
 
 	var chart = this;

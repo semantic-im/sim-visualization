@@ -155,7 +155,7 @@ function RealtimeChart(id, width, height) {
 	
 	this.legend;
 	
-	this.valuePreview;
+	//this.valuePreview;
 	
 	this.mouseMoveHandlers = new Array();
 	
@@ -186,7 +186,7 @@ RealtimeChart.prototype.init = function(color) {
 	
 	
 	this.focusArea = this.chartSvgArea.append("svg:g")
-		.attr("id", "focusArea")
+		.attr("id", validID(this.id + "RealtimeFocusArea"))
 		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
 
 	this.focusArea.append("svg:rect")
@@ -205,7 +205,7 @@ RealtimeChart.prototype.init = function(color) {
 
 	this.legend = new Legend(this);
 	
-	this.valuePreview = new ValuePreview(this);
+	//this.valuePreview = new ValuePreview(this);
 };
 
 RealtimeChart.prototype.processData = function(metric, data) {
@@ -474,18 +474,18 @@ RealtimeChart.prototype.drawChart = function() {
 		.attr("x2", 0)
 		.attr("y1", this.y(this.minY))
 		.attr("y2", this.y(this.maxY));
-	this.focusArea.select("#y0label").remove();
+	this.focusArea.select("#" + validID(this.id + "y0label")).remove();
 	this.focusArea.append("svg:text")
-		.attr("id", "y0label")
+		.attr("id", validID(this.id + "y0label"))
 		.attr("font-family", "Verdana")
 		.attr("font-size", "8")
 		.attr("text-anchor", "end")
 		.attr("x", 0)
 		.attr("y", this.chartHeight)
 		.text(this.getYLabel(this.minY));
-	this.focusArea.select("#y1label").remove();
+	this.focusArea.select("#" + validID(this.id + "y1label")).remove();
 	this.focusArea.append("svg:text")
-		.attr("id", "y1label")
+		.attr("id", validID(this.id + "y1label"))
 		.attr("font-family", "Verdana")
 		.attr("font-size", "8")
 		.attr("text-anchor", "end")
@@ -664,12 +664,14 @@ RealtimeChart.prototype.showValues = function() {
 		dataValues.push(dataValue);
 		
 		d3.select("#" + validID(metric.metric) + "ValuePreviewLabel")
-			.text(shortTime(new Date(dataValue.x)) + " - " + metric.getFormattedValue(dataValue.y));
+			.text(shortTime(new Date(dataValue.x)) + ", " + metric.getFormattedValue(dataValue.y));
 	}
 
 };
 
 function startRealtimeCharts() {
+	d3.select("#realtime-charts-dashboard").selectAll("div").remove();
+	
 	d3.select("#realtime-charts-dashboard")
 		.style("width", chartsDashboardWidth + "px")
 		.style("height", chartsDashboardHeight + "px")
@@ -691,7 +693,7 @@ function startRealtimeCharts() {
 	chart1.loadChartData();
 	//chart1.displayChart();
 	chart1.legend.refreshLegend(false);
-	chart1.valuePreview.refreshValuePreview();
+	//chart1.valuePreview.refreshValuePreview();
 	
 	d3.select("#realtime-charts-dashboard").append("div").attr("id", "realtime_chart2")
 		.attr("class", "chart")
@@ -702,14 +704,14 @@ function startRealtimeCharts() {
 	
 	chart2 = new RealtimeChart("realtime_chart2", (chartsDashboardWidth - 2), ((chartsDashboardHeight - 4) / 2));
 	chart2.init(chartColors(2));
-	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformAllocatedMemory', Metric.PLATFORM, 'Platform Allocated Memory.', 'description', ':Byte', 'b'));
-	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformFreeMemory', Metric.PLATFORM, 'Platform Free Memory.', 'description', ':Byte', 'b'));
-	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUnallocatedMemory', Metric.PLATFORM, 'Platform Unallocated Memory.', 'description', ':Byte', 'b'));
-	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUsedMemory', Metric.PLATFORM, 'Platform Used Memory.', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformAllocatedMemory', Metric.PLATFORM, 'Platform Allocated Memory', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformFreeMemory', Metric.PLATFORM, 'Platform Free Memory', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUnallocatedMemory', Metric.PLATFORM, 'Platform Unallocated Memory', 'description', ':Byte', 'b'));
+	chart2.addMetricToChart(new RealtimeMetric('http://www.larkc.eu/ontologies/IMOntology.rdf#PlatformUsedMemory', Metric.PLATFORM, 'Platform Used Memory', 'description', ':Byte', 'b'));
 	chart2.loadChartData();
 	//chart2.displayChart();
 	chart2.legend.refreshLegend(false);
-	chart2.valuePreview.refreshValuePreview();
+	//chart2.valuePreview.refreshValuePreview();
 	
 	loadDataInterval = setInterval(loadDataFct, REALTIME_CHART_LOAD_DATA_INTERVAL);
 	displayChartInterval = setInterval(displayChartFct, REALTIME_CHART_DISPLAY_UPDATE);
