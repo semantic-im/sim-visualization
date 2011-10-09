@@ -275,7 +275,7 @@ Chart.prototype.init = function(defaultScreenColor) {
 	
 	this.initialChartScreen();
 	
-	this.addChartContainers();
+	//this.addChartContainers();
 	
 	this.legend = new Legend(this);
 	
@@ -572,13 +572,11 @@ Chart.prototype.removeMetric = function(metric) {
 Chart.prototype.displayChart = function() {
 	var metrics = this.chartMetrics;
 	if (metrics.length == 0) {
-		this.chartSvgArea.selectAll("g").remove();
-		this.initialChartScreen();
-		return;
-	} else {
-		if (d3.select("#" + validID(this.id + "FocusArea")).empty()) {
-			this.addChartContainers();
+		if (!d3.select("#" + validID(this.id + "FocusArea")).empty()) {
+			this.chartSvgArea.selectAll("g").remove();
+			this.initialChartScreen();
 		}
+		return;
 	}
 	for (var i = 0; i < metrics.length; i++) {
 		if (metrics[i].data.length == 0) {
@@ -594,6 +592,9 @@ Chart.prototype.displayChart = function() {
 			//this.computeScales();
 		};
 	};
+	if (d3.select("#" + validID(this.id + "FocusArea")).empty()) {
+		this.addChartContainers();
+	}
 	this.computeScales();
 	this.drawChart();
 	for (var i = 0; i < metrics.length; i++) {

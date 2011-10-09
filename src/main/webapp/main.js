@@ -36,6 +36,8 @@ $(document).ready(function() {
 		.on("click", displayMetricCharts);
 	d3.select("#toOntologyGraph")
 		.on("click", displayOntologyGraph);
+	d3.select("#toMethodCallStatistics")
+		.on("click", displayMethodCallStatistics);
 });
 
 function initSystems(application) {
@@ -108,4 +110,8 @@ function displayOntologyGraph() {
 	d3.select("#applicationSystemSelection").style("display", "none");
 	d3.select("#ontologyGraph").style("display", "block");
 	var ontologyGraph = new OntologyGraph();
+}
+
+function displayMethodCallStatistics() {
+	
 }
