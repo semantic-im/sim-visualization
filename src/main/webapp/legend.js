@@ -11,6 +11,16 @@ function Legend(chart) {
 	
 	this.refreshLegend = function(allowDelete) {
 		var legendContainer = d3.select("#" + chart.id + "LegendContainer");
+		if (this.chart.chartMetrics.length == 0) {
+			if (!legendContainer.empty()) {
+				legendContainer.style("display", "none");
+			}
+			return;
+		} else {
+			if (!legendContainer.empty()) {
+				legendContainer.style("display", "block");
+			}
+		}
 		if (legendContainer.empty()) {
 			var chartSelection = d3.select("#" + this.chart.id);
 			var legendTitleLeft = (chart.allChartWidth - 100);

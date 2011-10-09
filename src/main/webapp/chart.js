@@ -210,7 +210,9 @@ function Chart(id, width, height) {
 	this.xScaleTimeFormat = null;
 }
 
-Chart.prototype.init = function(color) {
+Chart.prototype.init = function(defaultScreenColor) {
+	this.defaultScreenColor = defaultScreenColor;
+	
 	var chart = this;
 	
 	d3.select("#" + this.id)
@@ -271,34 +273,43 @@ Chart.prototype.init = function(color) {
 		.style("top", 2 + "px")
 		.style("left", 2 + "px");
 	
-	this.chartSvgArea.append("svg:rect")
-			.attr("pointer-events", "none")
-			.attr("x", 0 + "px")
-			.attr("y", 0 + "px")
-			.attr("height", (this.allChartHeight  - 4)  + "px")
-			.attr("width", (this.allChartWidth - 4) + "px")
-			.attr("fill", color).attr("fill-opacity", .2);
-	this.chartSvgArea.append("svg:text")
-		.attr("font-family", "Verdana")
-		.attr("font-size", "64")
-		.attr("stroke", "0px")
-		.attr("fill", color)
-		.attr("fill-opacity", "0.2")
-		.attr("x", this.allChartWidth / 2)
-		.attr("y", (this.h1 + this.h2 + p) / 2)
-		.attr("text-anchor", "middle")
-		.text("DROP HERE!");
-
-	this.focusArea = this.chartSvgArea.append("svg:g")
-		.attr("id", validID(this.id + "FocusArea"))
-		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
+	this.initialChartScreen();
 	
-	this.context = this.chartSvgArea.append("svg:g")
-		.attr("transform", "translate(" + this.leftSpaceWidth + "," + (this.topSpaceHeight + this.h1) + ")");
+	this.addChartContainers();
 	
 	this.legend = new Legend(this);
 	
 	//this.valuePreview = new ValuePreview(this);
+};
+
+Chart.prototype.initialChartScreen = function() {
+	this.chartSvgArea.append("svg:rect")
+		.attr("pointer-events", "none")
+		.attr("x", 0 + "px")
+		.attr("y", 0 + "px")
+		.attr("height", (this.allChartHeight  - 4)  + "px")
+		.attr("width", (this.allChartWidth - 4) + "px")
+		.attr("fill", this.defaultScreenColor).attr("fill-opacity", .2);
+	this.chartSvgArea.append("svg:text")
+		.attr("font-family", "Verdana")
+		.attr("font-size", "64")
+		.attr("stroke", "0px")
+		.attr("fill", this.defaultScreenColor)
+		.attr("fill-opacity", "0.2")
+		.attr("x", this.allChartWidth / 2)
+		.attr("y", (this.h1 + this.h2 + p) / 2)
+		.attr("text-anchor", "middle")
+		.text("DROP HERE!");	
+};
+
+Chart.prototype.addChartContainers = function() {
+	this.focusArea = this.chartSvgArea.append("svg:g")
+		.attr("id", validID(this.id + "FocusArea"))
+		.attr("transform", "translate(" + this.leftSpaceWidth + "," + this.topSpaceHeight + ")");
+
+	this.context = this.chartSvgArea.append("svg:g")
+		.attr("id", validID(this.id + "Context"))
+		.attr("transform", "translate(" + this.leftSpaceWidth + "," + (this.topSpaceHeight + this.h1) + ")");
 };
 
 Chart.prototype.updateFocusData = function(isBarTypeChart) {
@@ -560,12 +571,26 @@ Chart.prototype.removeMetric = function(metric) {
 
 Chart.prototype.displayChart = function() {
 	var metrics = this.chartMetrics;
+	if (metrics.length == 0) {
+		this.chartSvgArea.selectAll("g").remove();
+		this.initialChartScreen();
+		return;
+	} else {
+		if (d3.select("#" + validID(this.id + "FocusArea")).empty()) {
+			this.addChartContainers();
+		}
+	}
 	for (var i = 0; i < metrics.length; i++) {
 		if (metrics[i].data.length == 0) {
 			var metricData = null;
 			getMetricData(this.createMetricJsonParameter(metrics[i]), function(data) {metricData = data;});
 			metrics[i].data = this.processData(metrics[i], metricData);
 			metrics[i].focusData = metrics[i].data;
+			if (metrics[i].data.length == 0) {
+				alert("No data available for metric : " + metrics[i].metric);
+				this.removeMetric(metrics[i]);
+				return;
+			}
 			//this.computeScales();
 		};
 	};
