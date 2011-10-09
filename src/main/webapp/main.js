@@ -44,8 +44,6 @@ function initSystems(application) {
 				+ "	where { "
 				+ "		?id rdf:type :System ."
 				+ "		?id :hasName ?name ."
-				+ "		?id :hasMeasurement ?measurement ."
-				+ "		" + application.id + " :hasMeasurement ?measurement ."
 				+ "		?id :hasTotalMemory ?totalMemory ."
 				+ "		?id :hasCpuCount ?cpuCount ."
 				+ "	} "
