@@ -113,5 +113,9 @@ function displayOntologyGraph() {
 }
 
 function displayMethodCallStatistics() {
+	checkApplicationSystemToolbarVisibility();
 	
+	d3.select("#applicationSystemSelection").style("display", "none");
+	d3.select("#methodCallStatistics").style("display", "block");
+	new MethodCallStatistics();	
 }
