@@ -39,26 +39,32 @@ limit 10
 
 function MethodCallStatistics() {
 	this.chartTop = Math.round((clientHeight * 2) / 100);
-	this.chartLeft = Math.round(clientWidth  / 100);
-	this.chartHeight = Math.round((clientHeight * 90) / 100);
+	this.chartLeft = Math.round(clientWidth * 1 / 100);
 	this.chartWidth = Math.round(clientWidth * 98 / 100);
-	this.barChartHeight = this.chartHeight;
+	this.barChartWidth = this.chartWidth - 80;
 
 	this.data = this.loadData();
 	this.scales = this.processScales();
 
-	console.debug(this.data.length);
-	this.barChartGroupWidth = Math.round(this.chartWidth / this.data.length);
-	this.barWidth = Math.round(this.barChartGroupWidth / (this.scales.length + 2)); //add two for the space between groups
+	this.barHeight = 12;
+	this.barChartGroupHeight = this.barHeight * (this.scales.length + 2);
+
+	this.chartHeight = this.barChartGroupHeight * this.data.length; //Math.round((clientHeight * 96) / 100);
+	
+	//this.barChartGroupHeight = Math.round(this.chartHeight / this.data.length);
+	//this.barHeight = Math.round(this.barChartGroupHeight / (this.scales.length + 2)); //add two for the space between groups
 	
 	var methodCallStatistics = d3.select("#methodCallStatistics");
 	var svg = methodCallStatistics.append("svg:svg")
+		//.style("border", "1px solid black")
 		.attr("width", this.chartWidth + "px")
 		.attr("height", this.chartHeight + "px")
 		.style("position", "relative")
 		.style("top", this.chartTop + "px")
 		.style("left", this.chartLeft + "px");
 
+	var chartG = svg.append("svg:g")
+		.attr("transform", "translate(80, 0)");
 	/*
 	var group = svg.selectAll("g").data(this.data)
 		.enter().append("svg:g")
@@ -111,52 +117,52 @@ function MethodCallStatistics() {
 			}
 			*/
 			var aData = this.data[i].data[j];
-			var height = Math.ceil((this.scales[j](0) - this.scales[j](aData)));
-			var y = Math.floor(this.scales[j](aData));
-			var x = (this.barChartGroupWidth * i) +  (this.barWidth * (j + 1));
-			if (height == 0) {
-				y = y - 1;
-				height = 1;
+			var width = Math.ceil(this.scales[j](aData));
+			var x = 0;
+			var y = (this.barChartGroupHeight * i) +  (this.barHeight * (j + 1));
+			if (width == 0) {
+				x = x - 1;
+				width = 1;
 			}
-			svg.append("svg:rect")
-				.attr("height", height)
-				.attr("width", this.barWidth - 1)
+			chartG.append("svg:rect")
+				.attr("height", this.barHeight - 1)
+				.attr("width", width)
 				.attr("x", x)
 				.attr("y", y)
 				.attr("fill", colors(j));
-			var textY = y - 5;
+			var textX = width + 2;
 			var textOnBar = false;
-			if (textY < 30) {
+			if (width > this.barChartWidth - 30) {
 				textOnBar = true;
 			} 
 			var anchor = "start";
 			var fill = colors(j);
-			if (textOnBar) {
+			if (textOnBar == true) {
 				anchor = "end";
-				textY = 1;
+				textX = this.scales[j](aData) - 2;
 				fill = "white";
 			}
-			svg.append("svg:text")
+			chartG.append("svg:text")
 				.style("font-family", "Verdana")
 				.style("font-size", "10px")
 				.style("font-weight", "normal")
 				.style("stroke", "0px")
 				.style("fill", fill)
 				.style("text-anchor", anchor)
-				.attr("x", x + (this.barWidth/2))
-				.attr("y", textY)
-				.attr("transform", "rotate(-90 " + (x + (this.barWidth/2) + 2) + " " + textY + ")")
+				.attr("x", textX)
+				.attr("y", y + this.barHeight - 3)
+				//.attr("transform", "rotate(-90 " + (x + (this.barWidth/2) + 2) + " " + textY + ")")
 				.text(aData);
-			svg.append("svg:text")
+			chartG.append("svg:text")
 				.style("font-family", "Verdana")
 				.style("font-size", "10px")
 				.style("font-weight", "normal")
 				.style("stroke", "0px")
 				.style("fill", colors(j))
 				.style("text-anchor", "end")
-				.attr("x", x + (this.barWidth/2))
-				.attr("y", this.scales[j](0))
-				.attr("transform", "rotate(-90 " + (x + (this.barWidth/2) + 2) + " " + this.scales[j](0) + ")")
+				.attr("x", this.scales[j](0) - 2)
+				.attr("y", y + this.barHeight - 3)
+				//.attr("transform", "rotate(-90 " + (x + (this.barWidth/2) + 2) + " " + this.scales[j](0) + ")")
 				.text(function() {
 					switch(j) {
 					case 0:
@@ -180,15 +186,15 @@ function MethodCallStatistics() {
 					}
 				});
 		}
-		svg.append("svg:text")
+		chartG.append("svg:text")
 			.style("font-family", "Verdana")
 			.style("font-size", "10px")
 			.style("font-weight", "bold")
 			.style("stroke", "0px")
-			.attr("x", this.barChartGroupWidth * i + (this.barWidth / 2))
-			.attr("y", Math.ceil(this.scales[0](0)))
-			.text(this.data[i].method)
-			.attr("transform", "rotate(-90 " + (this.barChartGroupWidth * i + (this.barWidth / 2)) + " " + Math.ceil(this.scales[0](0)) + ")");
+			.attr("x", Math.ceil(this.scales[0](0)))
+			.attr("y", this.barChartGroupHeight * i + this.barHeight - 3)
+			.text(this.data[i].method);
+			//.attr("transform", "rotate(-90 " + (this.barChartGroupWidth * i + (this.barWidth / 2)) + " " + Math.ceil(this.scales[0](0)) + ")");
 	}
 };
 
@@ -268,7 +274,7 @@ MethodCallStatistics.prototype.processScales = function() {
 		}
 	}
 	for (var i = 0; i < maxValues.length; i++) {
-		scales[i] = d3.scale.linear().range([this.barChartHeight - 80, 0]).domain([0, maxValues[i]]);
+		scales[i] = d3.scale.linear().range([0, this.barChartWidth]).domain([0, maxValues[i]]);
 	}
 	return scales;
 };
