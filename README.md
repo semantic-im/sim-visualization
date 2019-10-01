@@ -32,7 +32,7 @@ USAGE
 -----
 
 - start an Sesame HTTP server on localhost (the current hardcoded url is 'http://127.0.0.1:8080/openrdf-sesame'), an repository with id 'sim' must exist in sesame
-- start the tool using the mvaen command : 'mvn jetty:run'
+- start the tool using the maven command : 'mvn jetty:run'
 - browse to this location : 'http://localhost:8081/sim-visualization/'
 
  
